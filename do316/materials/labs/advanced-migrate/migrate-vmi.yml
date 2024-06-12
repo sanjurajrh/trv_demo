@@ -1,0 +1,6 @@
+apiVersion: kubevirt.io/v1
+kind: VirtualMachineInstanceMigration
+metadata:
+  name: <CHANGE_ME>
+spec:
+  vmiName: <CHANGE_ME>

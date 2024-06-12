@@ -1,0 +1,11 @@
+---
+### Log in as the developer user so that the account appears available to the student ###
+- name: Log in as developer
+  command: >
+    oc login -u developer -p developer
+  ignore_errors: True
+### Log in as the admin user to correct the kubeconfig context for the remaining GE tasks
+- name: Log in as remaining users
+  command: >
+    oc login -u admin -p redhat
+  ignore_errors: True

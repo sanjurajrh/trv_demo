@@ -1,0 +1,65 @@
+---
+- name: Delete users
+  hosts: utility
+  remote_user: lab
+  gather_facts: False
+  module_defaults:
+    group/k8s:
+      host: "{{ ocp_cluster['host'] }}"
+      kubeconfig: "{{ ocp_cluster['kubeconfig'] }}"
+      validate_certs: "{{ ocp_cluster['validate_certs'] }}"
+  vars:
+    lab_user1: dbadmin1
+    lab_user2: dbadmin2
+    group_name: database-admins
+  tasks:
+    - name: Log in as admin user
+      command: oc login -u admin -p redhatocp
+    - name: Delete group
+      k8s:
+        state: absent
+        inline:
+          apiVersion: user.openshift.io/v1
+          kind: group
+          metadata:
+            name: "{{ group_name }}"
+    - name: Extract htpasswd-secret from cluster
+      command: >
+        oc get secret htpasswd-secret -n openshift-config -ojsonpath={.data.htpasswd}
+      register: htpass_original
+    - name: Decode and save original htpasswd secret to file
+      copy:
+        content: "{{ htpass_original.stdout | b64decode }}"
+        dest: "/tmp/users.htpasswd"
+    - name: Change file ownership and permissions
+      file:
+        path: /tmp/users.htpasswd
+        owner: lab
+        group: lab
+        mode: 0644
+    - name: Delete first user from users.htpasswd file
+      command: htpasswd -D /tmp/users.htpasswd "{{ lab_user1 }}"
+    - name: Delete second user from users.htpasswd file
+      command: htpasswd -D /tmp/users.htpasswd "{{ lab_user2 }}"
+    - name: Get contents of updated users.htpasswd
+      command: cat /tmp/users.htpasswd
+      register: htpass_new
+    - debug:
+        msg: "{{ htpass_new.stdout_lines }}"
+    - name: Update htpasswd secret
+      shell: >
+        oc create secret generic htpasswd-secret --from-file=htpasswd=/tmp/users.htpasswd --dry-run=client -o yaml -n openshift-config | oc replace -f -
+    - name: Delete user objects
+      command: >
+        oc delete user {{ item }}
+      with_items:
+        - "{{ lab_user1 }}"
+        - "{{ lab_user2 }}"
+      ignore_errors: yes
+    - name: Delete user identity objects
+      command: >
+        oc delete identity htpasswd_provider:{{ item }}
+      with_items:
+        - "{{ lab_user1 }}"
+        - "{{ lab_user2 }}"
+      ignore_errors: yes

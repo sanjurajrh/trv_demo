@@ -1,0 +1,15 @@
+kind: Route
+apiVersion: route.openshift.io/v1
+metadata:
+  name: web
+  namespace: network-review
+  labels: {}
+spec:
+  tls: null
+  host: intranet-dev.apps.ocp4.example.com
+  path: /
+  to:
+    kind: Service
+    name: web
+  port:
+    targetPort: 80

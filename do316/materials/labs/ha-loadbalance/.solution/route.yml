@@ -1,0 +1,12 @@
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: hello-web
+  namespace: ha-loadbalance
+spec:
+  host: helloworld-ha-loadbalance.apps.ocp4.example.com
+  port:
+    targetPort: 80
+  to:
+    kind: Service
+    name: hello-web

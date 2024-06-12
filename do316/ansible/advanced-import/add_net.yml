@@ -1,0 +1,30 @@
+---
+- import_playbook: ../roles/verify-worker-nodes.yml
+- import_playbook: ../roles/add-br0-bridge.yml
+
+- name: Create VM network
+  hosts: utility
+  remote_user: lab
+  gather_facts: False
+  module_defaults:
+    group/k8s:
+      host: "{{ ocp_cluster['host'] }}"
+      kubeconfig: "{{ ocp_cluster['kubeconfig'] }}"
+      validate_certs: "{{ ocp_cluster['validate_certs'] }}"
+  tasks:
+    - name: Create vm-private-net network attachment
+      k8s:
+        state: present
+        namespace: "default"
+        inline:
+          apiVersion: k8s.cni.cncf.io/v1
+          kind: NetworkAttachmentDefinition
+          metadata:
+            annotations:
+              k8s.v1.cni.cncf.io/resourceName: bridge.network.kubevirt.io/br0
+            name: vm-private-net
+            namespace: default
+          spec:
+            config: '{"name":"vm-private-net","type":"cnv-bridge","cniVersion":"0.3.1","bridge":"br0","macspoofchk":true,"ipam":{},"preserveDefaultVlan":false}'
+
+...

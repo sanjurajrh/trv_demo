@@ -1,0 +1,22 @@
+---
+- name: Copy htaccess file to utility
+  copy:
+    content: "{{ htaccess }}"
+    dest: /home/lab/.htaccess
+
+- name: Copy sed command to file
+  copy:
+    content: "{{ http_edit }}"
+    dest: /home/lab/http_edit.sh
+    mode: '0755'
+
+- name: Log on to create lab home dir on server
+  command: >
+    ssh -t -i /home/lab/.ssh/lab_rsa -o StrictHostKeyChecking=no lab@server.srv "sudo firewall-cmd --zone=public --permanent --add-service=http && sudo firewall-cmd --reload && exit"
+
+- name: SCP files to server
+  command: scp -i /home/lab/.ssh/lab_rsa -o StrictHostKeyChecking=no /home/lab/.htaccess /home/lab/http_edit.sh lab@server.srv:/home/lab/
+
+- name: Copy htaccess to /var/www/html/, create index.html, update httpd conf
+  command: >
+    ssh -t -i /home/lab/.ssh/lab_rsa -o StrictHostKeyChecking=no lab@server.srv "sudo bash ./http_edit.sh"

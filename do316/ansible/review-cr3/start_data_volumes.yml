@@ -1,0 +1,75 @@
+---
+- name: Create the Data Volume resources
+  hosts: utility
+  remote_user: lab
+  gather_facts: false
+  module_defaults:
+    group/k8s:
+      host: "{{ ocp_cluster['host'] }}"
+      kubeconfig: "{{ ocp_cluster['kubeconfig'] }}"
+      validate_certs: "{{ ocp_cluster['validate_certs'] }}"
+  vars:
+    dv_namespace: review-cr3
+    dv_name1: web1-documentroot
+    dv_name2: web2-documentroot
+    utility_url: http://utility.lab.example.com:8080/openshift4/images/
+    dv_size: 1Gi
+    dv_sc_name: ocs-external-storagecluster-ceph-rbd-virtualization
+    dv_sc_mode: Block
+
+  tasks:
+    - name: Ensure the project exist
+      k8s:
+        state: present
+        inline:
+          apiVersion: project.openshift.io/v1
+          kind: Project
+          metadata:
+            name: "{{ dv_namespace }}"
+
+    - name: Ensure the data volume for web1 exists
+      k8s:
+        state: present
+        namespace: "{{ dv_namespace }}"
+        inline:
+          apiVersion: cdi.kubevirt.io/v1beta1
+          kind: DataVolume
+          metadata:
+            name: "{{ dv_name1 }}"
+            namespace: "{{ dv_namespace }}"
+          spec:
+            pvc:
+              accessModes:
+                - ReadWriteMany
+              resources:
+                requests:
+                  storage: "{{ dv_size }}"
+              storageClassName: "{{ dv_sc_name }}"
+              volumeMode: "{{ dv_sc_mode }}"
+            source:
+              http:
+                url: "{{ utility_url}}review-cr3-web1.qcow2"
+
+    - name: Ensure the data volume for web2 exists
+      k8s:
+        state: present
+        namespace: "{{ dv_namespace }}"
+        inline:
+          apiVersion: cdi.kubevirt.io/v1beta1
+          kind: DataVolume
+          metadata:
+            name: "{{ dv_name2 }}"
+            namespace: "{{ dv_namespace }}"
+          spec:
+            pvc:
+              accessModes:
+                - ReadWriteMany
+              resources:
+                requests:
+                  storage: "{{ dv_size }}"
+              storageClassName: "{{ dv_sc_name }}"
+              volumeMode: "{{ dv_sc_mode }}"
+            source:
+              http:
+                url: "{{ utility_url}}review-cr3-web2.qcow2"
+...

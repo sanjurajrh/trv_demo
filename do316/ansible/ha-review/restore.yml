@@ -1,0 +1,16 @@
+---
+- name: Perform cluster cleanup
+  hosts: utility
+  remote_user: lab
+  gather_facts: false
+  module_defaults:
+    group/k8s:
+      host: "{{ ocp_cluster['host'] }}"
+      kubeconfig: "{{ ocp_cluster['kubeconfig'] }}"
+      validate_certs: "{{ ocp_cluster['validate_certs'] }}"
+  tasks:
+  - name: Remove node taints
+    shell: >
+      oc adm taint nodes {master01,master02,master03,worker02} key=virtualization:NoSchedule-
+    ignore_errors: True
+...

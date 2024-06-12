@@ -1,0 +1,62 @@
+---
+- name: Create the web service and route
+  hosts: utility
+  remote_user: lab
+  gather_facts: false
+  module_defaults:
+    group/k8s:
+      host: "{{ ocp_cluster['host'] }}"
+      kubeconfig: "{{ ocp_cluster['kubeconfig'] }}"
+      validate_certs: "{{ ocp_cluster['validate_certs'] }}"
+  vars:
+    vm_namespace: ha-node
+    vm_app: web
+    svc_name: www-web
+    route_name: web
+
+  tasks:
+    - name: Ensure the project exist
+      k8s:
+        state: present
+        inline:
+          apiVersion: project.openshift.io/v1
+          kind: Project
+          metadata:
+            name: "{{ vm_namespace }}"
+
+    - name: Ensure the service exists
+      k8s:
+        state: present
+        namespace: "{{ vm_namespace }}"
+        inline:
+          apiVersion: v1
+          kind: Service
+          metadata:
+            name: "{{ svc_name }}"
+            namespace: "{{ vm_namespace }}"
+          spec:
+            type: ClusterIP
+            selector:
+              app: "{{ vm_app }}"
+            ports:
+              - protocol: TCP
+                port: 80
+                targetPort: 80
+
+    - name: Ensure the route exists
+      k8s:
+        state: present
+        namespace: "{{ vm_namespace }}"
+        inline:
+          apiVersion: route.openshift.io/v1
+          kind: Route
+          metadata:
+            name: "{{ route_name }}"
+            namespace: "{{ vm_namespace }}"
+          spec:
+            port:
+              targetPort: 80
+            to:
+              kind: Service
+              name: "{{ svc_name }}"
+...

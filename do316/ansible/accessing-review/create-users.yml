@@ -1,0 +1,80 @@
+---
+- name: Create users
+  hosts: utility
+  remote_user: lab
+  gather_facts: False
+  module_defaults:
+    group/k8s:
+      host: "{{ ocp_cluster['host'] }}"
+      kubeconfig: "{{ ocp_cluster['kubeconfig'] }}"
+      validate_certs: "{{ ocp_cluster['validate_certs'] }}"
+
+  vars:
+    group_name: database-admins
+    users: [developer, dbadmin1, dbadmin2, admin]
+    passwd: [developer, redhatocp]
+
+  tasks:
+    - name: Login as admin
+      command: >
+        oc login -u {{ users[3] }} -p {{ passwd[1] }}
+
+    - name: Check if users exist in cluster
+      command: >
+        oc get users
+      register: cluster_users
+
+    - name: Extract htpasswd-secret from cluster
+      command: >
+        oc get secret htpasswd-secret -n openshift-config -ojsonpath={.data.htpasswd}
+      register: htpass_original
+      when: users[1] and users[2] not in cluster_users.stdout
+
+    - name: Decode and save original htpasswd secret to file
+      copy:
+        content: "{{ htpass_original.stdout | b64decode }}"
+        dest: "/tmp/users.htpasswd"
+      when: users[1] and users[2] not in cluster_users.stdout
+
+    - name: Change file ownership and permissions
+      file:
+        path: /tmp/users.htpasswd
+        owner: lab
+        group: lab
+        mode: 0644
+      when: users[1] and users[2] not in cluster_users.stdout
+
+    - name: Add first user to users.htpasswd file
+      command: >
+        htpasswd -bB /tmp/users.htpasswd {{ users[1] }} {{ passwd[1] }}
+      when: users[1] and users[2] not in cluster_users.stdout
+
+    - name: Add second user to users.htpasswd file
+      command: >
+        htpasswd -bB /tmp/users.htpasswd {{ users[2] }} {{ passwd[1] }}
+      when: users[1] and users[2] not in cluster_users.stdout
+
+    - name: Get contents of updated users.htpasswd
+      command: cat /tmp/users.htpasswd
+      register: htpass_new
+      when: users[1] and users[2] not in cluster_users.stdout
+
+    - name: Update htpasswd secret
+      shell: >
+        oc create secret generic htpasswd-secret --from-file=htpasswd=/tmp/users.htpasswd --dry-run=client -o yaml -n openshift-config | oc replace -f -
+      when: users[1] and users[2] not in cluster_users.stdout
+
+    - name: Create group
+      k8s:
+        state: present
+        inline:
+          apiVersion: user.openshift.io/v1
+          kind: group
+          metadata:
+            name: "{{ group_name }}"
+          users:
+            - "{{ users[1] }}"
+            - "{{ users[2] }}"
+      when: users[1] and users[2] not in cluster_users.stdout
+    - include: login-users.yml
+      when: users[1] and users[2] not in cluster_users.stdout

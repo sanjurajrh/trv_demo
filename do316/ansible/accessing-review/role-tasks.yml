@@ -1,0 +1,72 @@
+---
+- name: Create allow-vnc-console-access cluster role
+  k8s:
+    state: present
+    inline:
+      apiVersion: rbac.authorization.k8s.io/v1
+      kind: ClusterRole
+      metadata:
+        name: allow-vnc-console-access
+      rules:
+        - apiGroups:
+            - subresources.kubevirt.io
+          resources:
+            - virtualmachineinstances/console
+            - virtualmachineinstances/vnc
+          verbs:
+            - get
+
+- name: Apply role binding to developer
+  k8s:
+    state: present
+    inline:
+      apiVersion: rbac.authorization.k8s.io/v1
+      kind: ClusterRoleBinding
+      metadata:
+        name: allow-vnc-console-to-user
+      subjects:
+        - kind: User
+          apiGroup: rbac.authorization.k8s.io
+          name: "{{ item }}"
+      roleRef:
+        kind: ClusterRole
+        apiGroup: rbac.authorization.k8s.io
+        name: allow-vnc-console-access
+  with_items:
+    - "{{ users[2] }}"
+
+- name: Create datavolume-cloner cluster role
+  k8s:
+    state: present
+    inline:
+      apiVersion: rbac.authorization.k8s.io/v1
+      kind: ClusterRole
+      metadata:
+        name: datavolume-cloner
+      rules:
+      - apiGroups: ["cdi.kubevirt.io"]
+        resources: ["datavolumes/source"]
+        verbs: ["*"]
+
+- name: Create allow-clone-to-user role binding
+  k8s:
+    state: present
+    inline:
+      apiVersion: rbac.authorization.k8s.io/v1
+      kind: RoleBinding
+      metadata:
+        name: allow-clone-to-user
+        namespace: "{{ item }}"
+      subjects:
+      - kind: ServiceAccount
+        name: default
+        namespace: "{{ vm_namespace[1] }}"
+      - kind: ServiceAccount
+        name: default
+        namespace: "{{ vm_namespace[2] }}"
+      roleRef:
+        kind: ClusterRole
+        name: datavolume-cloner
+        apiGroup: rbac.authorization.k8s.io
+  with_items:
+    - "{{ vm_namespace[0] }}"

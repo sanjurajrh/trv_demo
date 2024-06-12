@@ -1,0 +1,4 @@
+          watchdog:
+            i6300esb:
+              action: poweroff
+            name: testwatchdog

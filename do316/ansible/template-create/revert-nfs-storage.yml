@@ -1,0 +1,26 @@
+---
+- name: Revert cluster settings
+  hosts: utility
+  remote_user: lab
+  gather_facts: false
+  module_defaults:
+    group/k8s:
+      host: "{{ ocp_cluster['host'] }}"
+      kubeconfig: "{{ ocp_cluster['kubeconfig'] }}"
+      validate_certs: "{{ ocp_cluster['validate_certs'] }}"
+
+  tasks:
+    - name: Confirm that the admin user is logged in on Utility
+      command: >
+        oc login -u admin -p redhatocp "{{ ocp_cluster['host'] }}"
+
+    - name: Retrieve current nfs-storage profile
+      command: >
+        oc get storageprofile nfs-storage -o yaml
+      register: oldnfsprofile
+
+    - name: Revert nfs-storage profile
+      command: >
+        oc patch storageprofile nfs-storage --type=json -p '[{ "op": "remove", "path": "/spec/claimPropterySets" }]'
+      when: oldnfsprofile.stdout.find('claimPropertySets') != 0
+      ignore_errors: true

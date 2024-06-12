@@ -1,0 +1,103 @@
+apiVersion: kubevirt.io/v1
+kind: VirtualMachine
+metadata:
+  labels:
+    app: mariadb
+    kubevirt.io/vm: staging-mariadb
+    flavor.template.kubevirt.io/small: 'true'
+    os.template.kubevirt.io/rhel8.4: 'true'
+    vm.kubevirt.io/template: rhel8-server-small
+    kubevirt.io/template.namespace: openshift
+    vm.kubevirt.io/template.revision: '1'
+    vm.kubevirt.io/template.version: v0.16.2
+    workload.template.kubevirt.io/server: 'true'
+  name: staging-mariadb
+  namespace: staging-db
+spec:
+  dataVolumeTemplates:
+  - apiVersion: cdi.kubevirt.io/v1beta1
+    kind: DataVolume
+    metadata:
+      name: staging-mariadb
+    spec:
+      pvc:
+        accessModes:
+        - ReadWriteMany
+        resources:
+          requests:
+            storage: 15Gi
+        storageClassName: ocs-external-storagecluster-ceph-rbd-virtualization
+        volumeMode: Block
+      source:
+        pvc:
+          name: <CHANGE_ME>
+          namespace: <CHANGE_ME>
+  runStrategy: RerunOnFailure
+  template:
+    metadata:
+      labels:
+        app: mariadb
+        flavor.template.kubevirt.io/small: "true"
+        kubevirt.io/domain: staging-mariadb
+        kubevirt.io/size: small
+        os.template.kubevirt.io/rhel8.4: "true"
+        workload.template.kubevirt.io/server: "true"
+    spec:
+      domain:
+        cpu:
+          cores: 1
+          sockets: 1
+          threads: 1
+        devices:
+          disks:
+          - bootOrder: 1
+            disk:
+              bus: virtio
+            name: staging-mariadb
+          - disk:
+              bus: virtio
+            name: cloudinitdisk
+          interfaces:
+          - masquerade: {}
+            name: default
+          networkInterfaceMultiqueue: true
+          rng: {}
+        machine:
+          type: pc-q35-rhel8.4.0
+        resources:
+          requests:
+            memory: 2Gi
+      evictionStrategy: LiveMigrate
+      hostname: staging-mariadb
+      networks:
+      - name: default
+        pod: {}
+      terminationGracePeriodSeconds: 180
+      volumes:
+      - dataVolume:
+          name: staging-mariadb
+        name: staging-mariadb
+      - cloudInitNoCloud:
+          userData: |-
+            #cloud-config
+            user: <CHANGE_ME>
+            password: redhatocp
+            chpasswd: { expire: False }
+            swap:
+              filename: /swap
+              size: "auto"
+              maxsize: 2000000
+            write_files:
+            - path: /var/stress-load.sh
+              permissions: '0750'
+              content: |
+                #! /bin/bash
+                stress -c 8 -d 2 -i 6 -m 1 --vm-bytes 1G -t 60s
+              owner: root:root
+              defer: true
+            - path: /etc/cron.d/stress
+              owner: root:root
+              permissions: '0644'
+              defer: true
+              content: "*/2 * * * * root /var/stress-load.sh\n"
+        name: cloudinitdisk

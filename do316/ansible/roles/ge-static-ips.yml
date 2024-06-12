@@ -1,0 +1,25 @@
+---
+- name: Insert entry to reserve dev-dbaccess IP
+  become: yes
+  lineinfile:
+    backup: yes
+    state: present
+    path: "{{ file }}"
+    regexp: '^host dev-dbaccess'
+    insertafter: 'fixed-address 192.168.51.14; option host-name "worker02"; }'
+    line: '                  host dev-dbaccess { hardware ethernet 00:00:00:00:00:01; fixed-address 192.168.51.10; option host-name "dev-dbaccess"; }'
+
+- name: Insert entry to reserve dev-external IP
+  become: yes
+  lineinfile:
+    backup: yes
+    state: present
+    path: "{{ file }}"
+    regexp: '^host dev-external'
+    insertafter: 'fixed-address 192.168.51.10; option host-name "dev-dbaccess"; }'
+    line: '                  host dev-external { hardware ethernet 00:00:00:00:00:02; fixed-address 192.168.51.20; option host-name "dev-external"; }'
+
+- name: Restart dhcpd
+  become: yes
+  command: >
+    systemctl restart dhcpd.service

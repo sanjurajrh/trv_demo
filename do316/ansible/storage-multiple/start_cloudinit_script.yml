@@ -1,0 +1,17 @@
+---
+- name: Prepare the utility system for the exercise
+  hosts: utility
+  remote_user: lab
+  gather_facts: false
+  become: true
+
+  tasks:
+    - name: Ensure the script is available through HTTP
+      copy:
+        src: dbmove.sh
+        dest: /var/www/html/dbmove.sh
+        group: root
+        owner: root
+        mode: 0644
+        setype: httpd_sys_content_t
+...

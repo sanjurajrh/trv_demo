@@ -1,0 +1,90 @@
+---
+- name: Deploy virtctl client
+  import_playbook: ../roles/deploy-virtctl.yml
+
+- name: Create namespace and data volume
+  hosts: utility
+  remote_user: lab
+  gather_facts: false
+  module_defaults:
+    group/k8s:
+      host: "{{ ocp_cluster['host'] }}"
+      kubeconfig: "{{ ocp_cluster['kubeconfig'] }}"
+      validate_certs: "{{ ocp_cluster['validate_certs'] }}"
+  vars:
+    utility_url: http://utility.lab.example.com:8080/openshift4/images/
+    vm_qcow2: rhel9-mariadb.qcow2
+    vm2_qcow2: rhel9-helloworld.qcow2
+    dv_name: mariadb-server
+    dv2_name: web-server
+    dv_namespace: template-review
+    dv_access_mode: ReadWriteMany
+    dv_size: 10Gi
+    dv_sc_name: ocs-external-storagecluster-ceph-rbd-virtualization
+    dv_sc_mode: Block
+
+  tasks:
+    - name: Ensure that the project exists
+      k8s:
+        state: present
+        inline:
+          apiVersion: project.openshift.io/v1
+          kind: Project
+          metadata:
+            name: "{{ dv_namespace }}"
+
+    - name: Create DV for mariadb-server
+      k8s:
+        state: present
+        inline:
+          apiVersion: cdi.kubevirt.io/v1beta1
+          kind: DataVolume
+          metadata:
+            name: "{{ dv_name }}"
+            namespace: "{{ dv_namespace }}"
+          spec:
+            source:
+              http:
+                url: "{{ utility_url}}{{ vm_qcow2 }}"
+            pvc:
+              accessModes:
+              - "{{ dv_access_mode }}"
+              volumeMode: "{{ dv_sc_mode }}"
+              resources:
+                requests:
+                  storage: "{{ dv_size }}"
+              storageClassName: "{{ dv_sc_name }}"
+        wait: yes
+        wait_condition:
+          type: Ready
+          status: "True"
+        wait_sleep: 60
+        wait_timeout: 1800
+
+    - name: Create DV for web-server
+      k8s:
+        state: present
+        inline:
+          apiVersion: cdi.kubevirt.io/v1beta1
+          kind: DataVolume
+          metadata:
+            name: "{{ dv2_name }}"
+            namespace: "{{ dv_namespace }}"
+          spec:
+            source:
+              http:
+                url: "{{ utility_url}}{{ vm2_qcow2 }}"
+            pvc:
+              accessModes:
+              - "{{ dv_access_mode }}"
+              volumeMode: "{{ dv_sc_mode }}"
+              resources:
+                requests:
+                  storage: "{{ dv_size }}"
+              storageClassName: "{{ dv_sc_name }}"
+        wait: yes
+        wait_condition:
+          type: Ready
+          status: "True"
+        wait_sleep: 60
+        wait_timeout: 1800

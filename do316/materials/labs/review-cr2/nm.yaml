@@ -1,0 +1,7 @@
+apiVersion: nodemaintenance.medik8s.io/v1beta1
+kind: NodeMaintenance
+metadata:
+  name: maintenance-node
+spec:
+  nodeName: <CHANGE_ME>
+  reason: "Maintenance required for the node"

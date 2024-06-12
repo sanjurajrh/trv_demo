@@ -1,0 +1,14 @@
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: www
+  namespace: ha-review
+  annotations:
+    router.openshift.io/cookie_name: "web"
+spec:
+  host: web-ha-review.apps.ocp4.example.com
+  port:
+    targetPort: 80
+  to:
+    kind: Service
+    name: web

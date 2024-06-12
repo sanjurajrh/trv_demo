@@ -1,0 +1,67 @@
+---
+- name: Create the front service and route
+  hosts: utility
+  remote_user: lab
+  gather_facts: false
+  module_defaults:
+    group/k8s:
+      host: "{{ ocp_cluster['host'] }}"
+      kubeconfig: "{{ ocp_cluster['kubeconfig'] }}"
+      validate_certs: "{{ ocp_cluster['validate_certs'] }}"
+  vars:
+    vm_namespace: ha-probe
+    vm_name: www1
+    vm_app: www1
+    utility_url: http://utility.lab.example.com:8080/openshift4/images/
+    vm_qcow2: helloworld.qcow2
+    vm_size: 10Gi
+    vm_sc_name: ocs-external-storagecluster-ceph-rbd-virtualization
+    vm_sc_mode: Block
+
+  tasks:
+    - name: Ensure the project exist
+      k8s:
+        state: present
+        inline:
+          apiVersion: project.openshift.io/v1
+          kind: Project
+          metadata:
+            name: "{{ vm_namespace }}"
+
+    - name: Ensure the service exists
+      k8s:
+        state: present
+        namespace: "{{ vm_namespace }}"
+        inline:
+          apiVersion: v1
+          kind: Service
+          metadata:
+            name: front
+            namespace: "{{ vm_namespace }}"
+          spec:
+            type: ClusterIP
+            selector:
+              tier: front
+            ports:
+              - protocol: TCP
+                port: 80
+                targetPort: 80
+
+    - name: Ensure the route exists
+      k8s:
+        state: present
+        namespace: "{{ vm_namespace }}"
+        inline:
+          apiVersion: route.openshift.io/v1
+          kind: Route
+          metadata:
+            name: www-front
+            namespace: "{{ vm_namespace }}"
+          spec:
+            host: www-ha-probe.apps.ocp4.example.com
+            port:
+              targetPort: 80
+            to:
+              kind: Service
+              name: front
+...

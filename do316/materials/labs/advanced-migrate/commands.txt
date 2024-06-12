@@ -1,0 +1,11 @@
+oc get storageprofile -n openshift-cnv
+
+oc describe storageprofile nfs-storage -n openshift-cnv
+
+oc edit storageprofile nfs-storage -n openshift-cnv
+
+oc patch -n openshift-cnv storageprofile nfs-storage --type='merge' --patch='{"spec":{"claimPropertySets": [{"accessModes": ["ReadWriteMany"]}]}}'
+
+oc create -f ~/DO316/labs/advanced-migrate/migrate-vmi.yml -n advanced-migrate
+
+oc delete vmim vm1-migration-job -n advanced-migrate

@@ -1,0 +1,21 @@
+Project: review-cr2
+
+Template name and display name: dev-web-rhel8
+
+Template support: Red Hat Training
+
+Operating system: Red Hat Enterprise Linux 8.0 or higher
+
+Boot disk URL: http://utility.lab.example.com:8080/openshift4/images/helloworld.qcow2
+
+Size: Tiny
+
+Workload type: Server
+
+Root disk size: 10 GiB
+
+Root disk interface: virtio
+
+Root disk storage class: ocs-external-storagecluster-ceph-rbd-virtualization
+
+Datavolume Template Name: ${NAME}

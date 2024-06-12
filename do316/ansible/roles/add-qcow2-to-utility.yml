@@ -1,0 +1,136 @@
+---
+- name: Download QCOW2 Images to Utility
+  hosts: utility
+  remote_user: lab
+  gather_facts: False
+  module_defaults:
+    group/k8s:
+      host: "{{ ocp_cluster['host'] }}"
+      kubeconfig: "{{ ocp_cluster['kubeconfig'] }}"
+      validate_certs: "{{ ocp_cluster['validate_certs'] }}"
+  vars:
+    quay_repo: quay.io/rht_nlind/vms
+    hello_tag: helloworld
+    db_srv_tag: mariadb-server
+    db_client_tag: mariadb-client
+    dev_db_tag: dev-dbaccess
+    img_src: /home/lab/.local/share/containers/storage/overlay/l/*/disk/
+    img_dest: /var/www/html/openshift4/images/
+  tasks:
+    - name: Install podman
+      become: True
+      become_user: root
+      dnf:
+        name: podman
+        state: present
+#
+# Copy the uncommented content above and the tasks for your image(s) to a new playbook.
+# Uncomment the tasks for the images you need.
+#
+### RHEL 8.5 with HTTPD and helloworld website
+#    - name: Check if disk exists
+#      stat:
+#        path:  "{{ img_dest | quote }}{{ hello_tag | quote }}.qcow2"
+#      register: hello_qcow
+#
+#    - name: Pull helloworld image with podman
+#      when: hello_qcow.stat.exists == False
+#      podman_image:
+#        name: "{{ quay_repo }}"
+#        tag: "{{ hello_tag }}"
+#
+#    - name: Copy image to images directory
+#      become: True
+#      become_user: root
+#      shell:
+#        cmd: cp {{ img_src }}{{ hello_tag | quote }}.qcow2 {{ img_dest | quote }} && chmod 0644 {{ img_dest | quote }}{{ hello_tag | quote }}.qcow2
+#      args:
+#        creates: "{{ img_dest | quote }}{{ hello_tag | quote }}.qcow2"
+#
+#    - name: Remove container image with podman
+#      when: hello_qcow.stat.exists == False
+#      podman_image:
+#        name: "{{ quay_repo }}"
+#        tag: "{{ hello_tag }}"
+#        state: absent
+#
+#### RHEL 8.5 image with MariaDB Server and sakila.db
+#    - name: Check if disk exists
+#      stat:
+#        path:  "{{ img_dest | quote }}{{ db_srv_tag | quote }}.qcow2"
+#      register: db_srv_qcow
+#
+#    - name: Pull mariadb-server image with podman
+#      when: db_srv_qcow.stat.exists == False
+#      podman_image:
+#        name: "{{ quay_repo }}"
+#        tag: "{{ db_srv_tag }}"
+#
+#    - name: Copy image to images directory
+#      become: True
+#      become_user: root
+#      shell:
+#        cmd: cp {{ img_src }}{{ db_srv_tag | quote }}.qcow2 {{ img_dest | quote }} && chmod 0644 {{ img_dest | quote }}{{ db_srv_tag | quote }}.qcow2
+#      args:
+#        creates: "{{ img_dest | quote }}{{ db_srv_tag | quote }}.qcow2"
+#
+#    - name: Remove container image with podman
+#      when: db_srv_qcow.stat.exists == False
+#      podman_image:
+#        name: "{{ quay_repo }}"
+#        tag: "{{ db_srv_tag }}"
+#        state: absent
+#
+#### RHEL 8.5 image with MariaDB client
+#    - name: Check if disk exists
+#      stat:
+#        path:  "{{ img_dest | quote }}{{ db_client_tag | quote }}.qcow2"
+#      register: db_client_qcow
+#
+#    - name: Pull mariadb-client image with podman
+#      when: db_client_qcow.stat.exists == False
+#      podman_image:
+#        name: "{{ quay_repo }}"
+#        tag: "{{ db_client_tag }}"
+#
+#    - name: Copy image to images directory
+#      become: True
+#      become_user: root
+#      shell:
+#        cmd: cp {{ img_src }}{{ db_client_tag | quote }}.qcow2 {{ img_dest | quote }} && chmod 0644 {{ img_dest | quote }}{{ db_client_tag | quote }}.qcow2
+#      args:
+#        creates: "{{ img_dest | quote }}{{ db_client_tag | quote }}.qcow2"
+#
+#    - name: Remove container image with podman
+#      when: db_client_qcow.stat.exists == False
+#      podman_image:
+#        name: "{{ quay_repo }}"
+#        tag: "{{ db_client_tag }}"
+#        state: absent
+#
+##### RHEL 8.5 image for the NMState GE
+#    - name: Check if disk exists
+#      stat:
+#        path:  "{{ img_dest | quote }}{{ dev_db_tag | quote }}.qcow2"
+#      register: dev_db_qcow
+#
+#    - name: Pull dev-dbaccess image with podman
+#      when: dev_db_qcow.stat.exists == False
+#      podman_image:
+#        name: "{{ quay_repo }}"
+#        tag: "{{ dev_db_tag }}"
+#
+#    - name: Copy image to images directory
+#      become: True
+#      become_user: root
+#      shell:
+#        cmd: cp {{ img_src }}{{ dev_db_tag | quote }}.qcow2 {{ img_dest | quote }} && chmod 0644 {{ img_dest | quote }}{{ dev_db_tag | quote }}.qcow2
+#      args:
+#        creates: "{{ img_dest | quote }}{{ dev_db_tag | quote }}.qcow2"
+#
+#    - name: Remove container image with podman
+#      when: dev_db_qcow.stat.exists == False
+#      podman_image:
+#        name: "{{ quay_repo }}"
+#        tag: "{{ dev_db_tag }}"
+#        state: absent

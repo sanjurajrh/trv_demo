@@ -1,0 +1,126 @@
+---
+- name: Create the mariadb-server virtual machine
+  hosts: utility
+  remote_user: lab
+  gather_facts: false
+  module_defaults:
+    group/k8s:
+      host: "{{ ocp_cluster['host'] }}"
+      kubeconfig: "{{ ocp_cluster['kubeconfig'] }}"
+      validate_certs: "{{ ocp_cluster['validate_certs'] }}"
+  vars:
+    vm_namespace: network-services
+    vm_name: mariadb-server
+    vm_app: mariadb-server
+    utility_url: http://utility.lab.example.com:8080/openshift4/images/
+    vm_qcow2: mariadb-server.qcow2
+    vm_size: 10Gi
+    vm_sc_name: ocs-external-storagecluster-ceph-rbd-virtualization
+    vm_sc_mode: Block
+
+  tasks:
+    - name: Ensure the project exist
+      k8s:
+        state: present
+        inline:
+          apiVersion: project.openshift.io/v1
+          kind: Project
+          metadata:
+            name: "{{ vm_namespace }}"
+
+    - name: Ensure the virtual machine and the data volume exist
+      k8s:
+        state: present
+        namespace: "{{ vm_namespace }}"
+        inline:
+          apiVersion: kubevirt.io/v1
+          kind: VirtualMachine
+          metadata:
+            name: "{{ vm_name }}"
+            namespace: "{{ vm_namespace }}"
+            labels:
+              app: "{{ vm_app }}"
+              kubevirt.io/vm: "{{ vm_name }}"
+              flavor.template.kubevirt.io/small: 'true'
+              os.template.kubevirt.io/rhel8.4: 'true'
+              vm.kubevirt.io/template: rhel8-server-small
+              vm.kubevirt.io/template.namespace: openshift
+              vm.kubevirt.io/template.revision: '1'
+              vm.kubevirt.io/template.version: v0.16.2
+              workload.template.kubevirt.io/server: 'true'
+          spec:
+            dataVolumeTemplates:
+              - apiVersion: cdi.kubevirt.io/v1beta1
+                kind: DataVolume
+                metadata:
+                  name: "{{ vm_name }}"
+                spec:
+                  pvc:
+                    accessModes:
+                      - ReadWriteMany
+                    resources:
+                      requests:
+                        storage: "{{ vm_size }}"
+                    storageClassName: "{{ vm_sc_name }}"
+                    volumeMode: "{{ vm_sc_mode }}"
+                  source:
+                    http:
+                      url: "{{ utility_url}}{{ vm_qcow2 }}"
+            runStrategy: RerunOnFailure
+            template:
+              metadata:
+                labels:
+                  flavor.template.kubevirt.io/small: 'true'
+                  kubevirt.io/domain: "{{ vm_name }}"
+                  kubevirt.io/size: small
+                  os.template.kubevirt.io/rhel8.4: 'true'
+                  workload.template.kubevirt.io/server: 'true'
+              spec:
+                domain:
+                  cpu:
+                    cores: 1
+                    sockets: 1
+                    threads: 1
+                  devices:
+                    disks:
+                      - bootOrder: 1
+                        disk:
+                          bus: virtio
+                        name: "{{ vm_name }}"
+                      - disk:
+                          bus: virtio
+                        name: cloudinitdisk
+                    interfaces:
+                      - name: default
+                        masquerade: {}
+                    networkInterfaceMultiqueue: true
+                    rng: {}
+                  machine:
+                    type: pc-q35-rhel8.4.0
+                  resources:
+                    requests:
+                      memory: 2Gi
+                evictionStrategy: LiveMigrate
+                hostname: "{{ vm_name }}"
+                networks:
+                  - name: default
+                    pod: {}
+                terminationGracePeriodSeconds: 180
+                volumes:
+                  - dataVolume:
+                      name: "{{ vm_name }}"
+                    name: "{{ vm_name }}"
+                  - cloudInitNoCloud:
+                      userData: |-
+                        #cloud-config
+                        user: developer
+                        password: developer
+                        chpasswd: { expire: False }
+                    name: cloudinitdisk
+        wait: true
+        wait_condition:
+          type: Ready
+          status: "True"
+        wait_sleep: 60
+        wait_timeout: 1800
+...

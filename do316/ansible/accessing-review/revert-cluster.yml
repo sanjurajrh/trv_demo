@@ -1,0 +1,15 @@
+---
+- name: Revert Cluster vCPU settings and roles
+  hosts: utility
+  remote_user: lab
+  gather_facts: False
+  module_defaults:
+    group/k8s:
+      host: "{{ ocp_cluster['host'] }}"
+      kubeconfig: "{{ ocp_cluster['kubeconfig'] }}"
+      validate_certs: "{{ ocp_cluster['validate_certs'] }}"
+  vars:
+    vm_namespace: [vm-images, development-db, staging-db]
+  tasks:
+    - include: role-cleanup.yml
+    - include: disable-vcpu.yml

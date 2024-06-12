@@ -1,0 +1,13 @@
+---
+user_kubeconfig:
+  file: /home/lab/.kube/config
+  remote: True
+
+control_nodes:
+  - master01
+  - master02
+  - master03
+
+worker_nodes:
+  - worker01
+  - worker02

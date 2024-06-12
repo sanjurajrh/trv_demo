@@ -1,0 +1,8 @@
+Virtual machine name: web1
+             Project: review-cr1
+       Template name: Red Hat Enterprise Linux 8.0 VM
+       Boot disk URL: http://utility.lab.example.com:8080/openshift4/images/helloworld.qcow2
+
+          Second nic: nic-0
+  Network attachment: ext-net
+                Type: Bridge

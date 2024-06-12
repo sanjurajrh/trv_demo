@@ -1,0 +1,79 @@
+---
+- name: Revert worker node settings and labels
+  hosts: utility
+  remote_user: lab
+  gather_facts: False
+  module_defaults:
+    group/k8s:
+      host: "{{ ocp_cluster['host'] }}"
+      kubeconfig: "{{ ocp_cluster['kubeconfig'] }}"
+      validate_certs: "{{ ocp_cluster['validate_certs'] }}"
+
+  tasks:
+    - name: Set br1 to absent
+      k8s:
+        state: present
+        inline:
+          apiVersion: nmstate.io/v1
+          kind: NodeNetworkConfigurationPolicy
+          metadata:
+            name: remove-br0-ens4-policy
+          spec:
+            nodeSelector:
+              external-network: "true"
+            desiredState:
+              interfaces:
+                - name: br1
+                  description: Linux bridge with ens4 as a port
+                  type: linux-bridge
+                  state: absent
+                  ipv4:
+                    dhcp: true
+                    enabled: true
+                  bridge:
+                    options:
+                      stp:
+                        enabled: false
+                      port:
+                      - name: ens4
+                - name: ens4
+                  type: ethernet
+                  state: up
+                  mtu: 1500
+                  ipv4:
+                    auto-dns: true
+                    auto-gateway: true
+                    auto-route-table-id: 0
+                    auto-routes: true
+                    dhcp: true
+                    enabled: true
+                  ipv6:
+                    auto-dns: true
+                    auto-gateway: true
+                    auto-route-table-id: 0
+                    auto-routes: true
+                    autoconf: true
+                    dhcp: true
+                    enabled: true
+                  lldp:
+                    enabled: false
+          wait: yes
+          wait_condition:
+            type: Available
+            status: "True"
+
+    - name: Delete external-network label from worker01
+      shell: oc label node worker01 external-network-
+      ignore_errors: yes
+
+    - name: Delete external-network label from worker02
+      shell: oc label node worker02 external-network-
+      ignore_errors: yes
+
+    - name: Delete br0-ens4-policy from cluster
+      shell: oc delete nncp br0-ens4-policy
+      ignore_errors: yes
+
+    - name: Delete remove-br0-ens4-policy from cluster
+      shell: oc delete nncp remove-br0-ens4-policy
+      ignore_errors: yes

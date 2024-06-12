@@ -1,0 +1,11 @@
+exercises:
+  network_external:
+    name: network-external
+    dirs:
+      - labs
+      - solutions
+  multihomed_nmstate:
+    name: multihomed-nmstate
+    dirs:
+      - labs
+      - solutions

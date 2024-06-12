@@ -1,0 +1,26 @@
+---
+- name: Prepare the utility system for lab
+  hosts: utility
+  remote_user: lab
+  gather_facts: false
+  become: true
+
+  tasks:
+    - name: Ensure the disk image is available through HTTP
+      copy:
+        src: data.qcow2
+        dest: /var/www/html/openshift4/images/storage-review.qcow2
+        group: root
+        owner: root
+        mode: 0644
+        setype: httpd_sys_content_t
+
+    - name: Ensure an NFS share exists for the lab
+      file:
+        path: /exports-ocp4/storage-review
+        state: directory
+        group: root
+        owner: root
+        mode: 0777
+        setype: public_content_rw_t
+...

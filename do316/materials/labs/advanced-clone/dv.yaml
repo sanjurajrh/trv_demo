@@ -1,0 +1,15 @@
+apiVersion: cdi.kubevirt.io/v1beta1
+kind: DataVolume
+metadata:
+  name: documentroot-clone1
+  namespace: advanced-clone
+spec:
+  storage:
+    resources:
+      requests:
+        storage: 1Gi
+    storageClassName: ocs-external-storagecluster-ceph-rbd-virtualization
+  source:
+    pvc:
+      name: <CHANGE_ME>
+      namespace: advanced-clone

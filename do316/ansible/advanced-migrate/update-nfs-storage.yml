@@ -1,0 +1,20 @@
+---
+- name: Retrieve nfs-storage profile
+  command: >
+    oc get storageprofile nfs-storage -n openshift-cnv -o yaml
+  register: oldnfsprofile
+
+- name: Update the storage profile
+  k8s:
+    merge_type: merge
+    inline:
+      apiVersion: cdi.kubevirt.io/v1beta1
+      kind: StorageProfile
+      metadata:
+        name: nfs-storage
+      spec:
+        claimPropertySets:
+        - accessModes:
+          - ReadWriteOnce
+          volumeMode: Filesystem
+  when: oldnfsprofile.stdout.find('ReadWriteOnce') != 1

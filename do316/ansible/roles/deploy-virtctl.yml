@@ -1,0 +1,42 @@
+---
+- name: Download virtctl and virt-viewer
+  hosts: localhost
+  gather_facts: False
+  vars:
+    virt_url: https://hyperconverged-cluster-cli-download-openshift-cnv.apps.ocp4.example.com/amd64/linux/virtctl.tar.gz
+    virt_path: /usr/local/bin/
+    virt_tar: virtctl.tar.gz
+    virt_file: virtctl
+  tasks:
+    - name: Check if virtctl is in virt_path
+      stat:
+        path: "{{ virt_path }}{{ virt_file }}"
+      register: virt_status
+      ignore_errors: yes
+
+    - name: Download virtctl if it doesn't exist on workstation
+      become: yes
+      get_url:
+        url: "{{ virt_url }}"
+        dest: "{{ virt_path }}"
+      when: virt_status.stat.exists == False
+      ignore_errors: yes
+
+    - name: Extract virtctl if it doesn't exist
+      become: yes
+      unarchive:
+        src: "{{ virt_path }}{{ virt_tar }}"
+        dest: "{{ virt_path }}"
+        remote_src: yes
+        creates: "{{ virt_path}}{{ virt_file }}"
+        mode: +x
+      register: virtctl_install
+      when: virt_status.stat.exists == False
+      ignore_errors: yes
+
+    - name: Remove {{ virt_tar }}
+      when: virtctl_install == True
+      file:
+        path: "{{ virt_path }}{{ virt_tar }}"
+        state: absent
+      ignore_errors: yes

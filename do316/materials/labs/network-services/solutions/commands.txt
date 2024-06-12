@@ -1,0 +1,1 @@
+oc run testdb -it --rm -n default --image=quay.io/redhattraining/mariadb:10.5 --command -- mysql --connect-timeout=5 -u devuser -p'developer' -h mariadb.network-services.svc.cluster.local sakila

@@ -1,0 +1,28 @@
+---
+- name: Ping dev-external from external network
+  hosts: utility
+  remote_user: lab
+  become: false
+
+  tasks:
+  - name: Confirm that the admin user is logged in on Utility
+    command: >
+      oc login -u admin -p redhatocp "{{ ocp_cluster['host'] }}"
+
+  - name: Retrieve VMI IP address
+    shell: oc get vmi/dev-external -n multihomed-review -o=jsonpath='{.status.interfaces[1].ipAddress}'
+    register: vmi_ip
+    ignore_errors: true
+
+  - name: Print IP
+    debug:
+      var: vmi_ip.stdout
+
+  - name: Test connection
+    shell: "ping -c4 {{ vmi_ip.stdout }}"
+    register: results
+
+  - name: If connection fails, show error message
+    fail:
+      msg: "{{ vmi_ip }} is not accessible from external network"
+    when: '"100% packket loss" in results.stdout'

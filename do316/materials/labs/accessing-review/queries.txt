@@ -1,0 +1,22 @@
+#####
+This file contains the PromQL queries for the accessing-review lab exercise.
+####
+
+##### Developer Console Queries #####
+
+# vcpu_wait_seconds
+topk(3, sum by (name, namespace) (rate(kubevirt_vmi_vcpu_wait_seconds[5m])))
+
+# memory_usable_bytes
+topk(3, sum by (name, namespace) (rate(kubevirt_vmi_memory_usable_bytes[5m])))
+
+# memory_unused_bytes
+topk(3, sum by (name, namespace) (rate(kubevirt_vmi_memory_unused_bytes[5m])))
+
+##### Metrics Queries #####
+
+# I/O - vCPU_wait_seconds
+topk(3, sum by (name,namespace) (rate(kubevirt_vmi_vcpu_wait_seconds{namespace=~".*-db"}[5m])))
+
+# memory_available_bytes
+topk(3, sum by (name, namespace) (rate(kubevirt_vmi_memory_available_bytes{namespace=~".*-db"}[5m])))

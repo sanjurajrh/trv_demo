@@ -1,0 +1,29 @@
+---
+- name: Prepare the utility system for lab
+  hosts: utility
+  remote_user: lab
+  gather_facts: false
+  become: true
+
+  tasks:
+    - name: Ensure an NFS share exists for the lab
+      file:
+        path: /exports-ocp4/ova
+        state: directory
+        group: root
+        owner: root
+        mode: 0777
+        setype: container_file_t
+
+    - name: Ensure the OVA image is available
+      copy:
+        remote_src: true
+        src: /var/www/html/openshift4/images/rhel9-web.ova
+        dest: /exports-ocp4/ova
+        group: root
+        owner: root
+        mode: 0644
+        setype: container_file_t
+
+
+...

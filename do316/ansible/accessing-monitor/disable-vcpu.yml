@@ -1,0 +1,9 @@
+---
+- name: Disable vCPU Stats MC
+  k8s:
+    state: absent
+    inline:
+      apiVersion: machineconfiguration.openshift.io/v1
+      kind: MachineConfig
+      metadata:
+        name: 05-worker-kernelarg-schedstats-vcpu

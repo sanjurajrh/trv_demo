@@ -1,0 +1,49 @@
+---
+- name: Label and configure br0 bridge on worker nodes
+  hosts: utility
+  remote_user: lab
+  gather_facts: False
+  module_defaults:
+    group/k8s:
+      host: "{{ ocp_cluster['host'] }}"
+      kubeconfig: "{{ ocp_cluster['kubeconfig'] }}"
+      validate_certs: "{{ ocp_cluster['validate_certs'] }}"
+  tasks:
+    - name: Label worker01
+      shell: oc label node worker01 external-network=true
+      ignore_errors: yes
+
+    - name: Label worker02
+      shell: oc label node worker02 external-network=true
+      ignore_errors: yes
+
+    - name: Configure linux bridge on ens4
+      k8s:
+        state: present
+        inline:
+          apiVersion: nmstate.io/v1
+          kind: NodeNetworkConfigurationPolicy
+          metadata:
+            name: br0-ens4-policy
+          spec:
+            nodeSelector:
+              external-network: "true"
+            desiredState:
+              interfaces:
+                - name: br0
+                  description: Linux bridge with ens4 as a port
+                  type: linux-bridge
+                  state: up
+                  ipv4:
+                    dhcp: true
+                    enabled: true
+                  bridge:
+                    options:
+                      stp:
+                        enabled: false
+                    port:
+                      - name: ens4
+            wait: yes
+            wait_condition:
+              type: Available
+              status: "True"

@@ -1,0 +1,13 @@
+---
+- name: Cleanup the utility system after the exercise
+  hosts: utility
+  remote_user: lab
+  gather_facts: false
+  become: true
+
+  tasks:
+    - name: Ensure the script is not available through HTTP
+      file:
+        path: /var/www/html/dbmove.sh
+        state: absent
+...

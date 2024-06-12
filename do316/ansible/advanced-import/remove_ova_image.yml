@@ -1,0 +1,14 @@
+---
+- name: Cleanup the utility system after the exercise
+  hosts: utility
+  remote_user: lab
+  gather_facts: false
+  become: true
+
+  tasks:
+    - name: Remove OVA NFS share
+      file:
+        path: /exports-ocp4/ova
+        state: absent
+
+...

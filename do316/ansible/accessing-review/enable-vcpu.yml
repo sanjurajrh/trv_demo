@@ -1,0 +1,34 @@
+---
+- name: Enable vCPU metrics
+  hosts: utility
+  remote_user: lab
+  gather_facts: False
+  module_defaults:
+    group/k8s:
+      host: "{{ ocp_cluster['host'] }}"
+      kubeconfig: "{{ ocp_cluster['kubeconfig'] }}"
+      validate_certs: "{{ ocp_cluster['validate_certs'] }}"
+  tasks:
+    - name: Retrieve current kernelArguments
+      command: >
+        oc get machineconfig --output=jsonpath='{.items[0:10].spec.kernelArguments}'
+      register: kernel_args
+      ignore_errors: yes
+
+    - name: Enable vCPU Stats if not present
+      when: "'*schedstats*' not in kernel_args.stdout_lines"
+      k8s:
+        state: present
+        inline:
+          apiVersion: machineconfiguration.openshift.io/v1
+          kind: MachineConfig
+          metadata:
+            labels:
+              machineconfiguration.openshift.io/role: worker
+            name: 05-worker-kernelarg-schedstats-vcpu
+          spec:
+            config:
+              ignition:
+                version: 3.2.0
+            kernelArguments:
+              - schedstats=enable

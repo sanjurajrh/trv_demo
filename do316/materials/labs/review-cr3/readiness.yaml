@@ -1,0 +1,10 @@
+# Snippet of Readiness Probe
+      readinessProbe:
+        httpGet:
+          path: <CHANGE_ME>
+          port: <CHANGE_ME>
+        initialDelaySeconds: 60
+        periodSeconds: 5
+        timeoutSeconds: 2
+        failureThreshold: 2
+        successThreshold: 1

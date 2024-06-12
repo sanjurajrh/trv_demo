@@ -1,0 +1,1 @@
+oc adm drain "<CHANGE_ME>" --delete-emptydir-data --ignore-daemonsets --force

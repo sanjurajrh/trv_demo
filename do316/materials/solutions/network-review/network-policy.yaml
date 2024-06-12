@@ -1,0 +1,17 @@
+kind: NetworkPolicy
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: allow-database
+  namespace: network-review
+spec:
+  podSelector:
+    matchLabels:
+      tier: backend
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          allowed: database
+    ports:
+    - port: 3306
+      protocol: TCP

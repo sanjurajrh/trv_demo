@@ -1,0 +1,95 @@
+---
+- name: Deploy virtctl client
+  import_playbook: ../roles/deploy-virtctl.yml
+
+- name: The project and a data volume for the VM
+  hosts: utility
+  remote_user: lab
+  gather_facts: false
+  module_defaults:
+    group/k8s:
+      host: "{{ ocp_cluster['host'] }}"
+      kubeconfig: "{{ ocp_cluster['kubeconfig'] }}"
+      validate_certs: "{{ ocp_cluster['validate_certs'] }}"
+  vars:
+    dv_namespace: vm-images
+    dv_name: web-server-image
+    vm_namespace: template-intro
+    utility_url: http://utility.lab.example.com:8080/openshift4/images/
+    dv_qcow2: rhel9-helloworld.qcow2
+    dv_size: 10Gi
+    dv_sc_name: ocs-external-storagecluster-ceph-rbd-virtualization
+    dv_sc_mode: Block
+
+  tasks:
+    - name: Ensure that the project exists
+      k8s:
+        state: present
+        inline:
+          apiVersion: project.openshift.io/v1
+          kind: Project
+          metadata:
+            name: "{{ item }}"
+      with_list:
+        - "{{ dv_namespace }}"
+        - "{{ vm_namespace }}"
+
+    - name: Create data volume for exercise
+      k8s:
+        state: present
+        inline:
+          apiVersion: cdi.kubevirt.io/v1beta1
+          kind: DataVolume
+          metadata:
+            name: "{{ dv_name }}"
+            namespace: "{{ dv_namespace}}"
+          spec:
+            source:
+              http:
+                url: "{{ utility_url}}{{ dv_qcow2 }}"
+            pvc:
+              accessModes:
+              - ReadWriteMany
+              volumeMode: "{{ dv_sc_mode }}"
+              resources:
+                requests:
+                  storage: "{{ dv_size }}"
+              storageClassName: "{{ dv_sc_name }}"
+            preallocation: true
+        wait: yes
+        wait_condition:
+          type: Ready
+          status: "True"
+        wait_sleep: 60
+        wait_timeout: 1800
+
+    - name: Create role to for cloning between projects
+      k8s:
+        state: present
+        inline:
+          apiVersion: rbac.authorization.k8s.io/v1
+          kind: ClusterRole
+          metadata:
+            name: datavolume-cloner
+          rules:
+          - apiGroups: ["cdi.kubevirt.io"]
+            resources: ["datavolumes/source"]
+            verbs: ["*"]
+
+    - name: Create rolebinding to enable cloning
+      k8s:
+        state: present
+        inline:
+          apiVersion: rbac.authorization.k8s.io/v1
+          kind: RoleBinding
+          metadata:
+            name: allow-clone-to-user
+            namespace: "{{ dv_namespace }}"
+          subjects:
+          - kind: ServiceAccount
+            name: default
+            namespace: "{{ vm_namespace }}"
+          roleRef:
+            kind: ClusterRole
+            name: datavolume-cloner
+            apiGroup: rbac.authorization.k8s.io

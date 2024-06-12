@@ -1,0 +1,14 @@
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: CHANGE_ME
+  namespace: CHANGE_ME
+  annotations:
+    router.openshift.io/cookie_name: "hello"
+spec:
+  host: hello-ha-loadbalance.apps.ocp4.example.com
+  port:
+    targetPort: 80
+  to:
+    kind: Service
+    name: CHANGE_ME

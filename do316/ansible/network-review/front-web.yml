@@ -1,0 +1,167 @@
+---
+- name: Create the front-web virtual machine
+  hosts: utility
+  remote_user: lab
+  gather_facts: false
+  module_defaults:
+    group/k8s:
+      host: "{{ ocp_cluster['host'] }}"
+      kubeconfig: "{{ ocp_cluster['kubeconfig'] }}"
+      validate_certs: "{{ ocp_cluster['validate_certs'] }}"
+  vars:
+    vm_namespace: network-review
+    vm_name: front-web
+    vm_app: front-web
+    utility_url: http://utility.lab.example.com:8080/openshift4/images/
+    vm_qcow2: helloworld.qcow2
+    vm_size: 10Gi
+    vm_sc_name: ocs-external-storagecluster-ceph-rbd-virtualization
+    vm_sc_mode: Block
+    vm_user: developer
+    vm_pass: developer
+    ssh_key_file: "lab_rsa.pub"
+    cgi_script: "dbtest.sh"
+
+  tasks:
+  - name: Ensure the project exist
+    k8s:
+      state: present
+      inline:
+        apiVersion: project.openshift.io/v1
+        kind: Project
+        metadata:
+          name: "{{ vm_namespace }}"
+
+  - name: Ensure the virtual machine and the data volume exist
+    k8s:
+      state: present
+      namespace: "{{ vm_namespace }}"
+      wait: yes
+      wait_condition:
+        type: Ready
+        status: "True"
+      wait_sleep: 60
+      wait_timeout: 1800
+      inline:
+        apiVersion: kubevirt.io/v1
+        kind: VirtualMachine
+        metadata:
+          name: "{{ vm_name }}"
+          namespace: "{{ vm_namespace }}"
+          labels:
+            app: "{{ vm_app }}"
+            kubevirt.io/vm: "{{ vm_name }}"
+            flavor.template.kubevirt.io/small: 'true'
+            os.template.kubevirt.io/rhel8.4: 'true'
+            vm.kubevirt.io/template: rhel8-server-small
+            vm.kubevirt.io/template.namespace: openshift
+            vm.kubevirt.io/template.revision: '1'
+            vm.kubevirt.io/template.version: v0.16.2
+            workload.template.kubevirt.io/server: 'true'
+        spec:
+          dataVolumeTemplates:
+          - apiVersion: cdi.kubevirt.io/v1beta1
+            kind: DataVolume
+            metadata:
+              name: "{{ vm_name }}"
+            spec:
+              pvc:
+                accessModes:
+                - ReadWriteMany
+                resources:
+                  requests:
+                    storage: "{{ vm_size }}"
+                storageClassName: "{{ vm_sc_name }}"
+                volumeMode: "{{ vm_sc_mode }}"
+              source:
+                http:
+                  url: "{{ utility_url}}{{ vm_qcow2 }}"
+          runStrategy: RerunOnFailure
+          template:
+            metadata:
+              labels:
+                flavor.template.kubevirt.io/small: 'true'
+                kubevirt.io/domain: "{{ vm_name }}"
+                kubevirt.io/size: small
+                os.template.kubevirt.io/rhel8.4: 'true'
+                workload.template.kubevirt.io/server: 'true'
+            spec:
+              domain:
+                cpu:
+                  cores: 1
+                  sockets: 1
+                  threads: 1
+                devices:
+                  disks:
+                  - name: "{{ vm_name }}"
+                    bootOrder: 1
+                    disk:
+                      bus: virtio
+                  - name: cloudinitdisk
+                    disk:
+                      bus: virtio
+                  interfaces:
+                  - name: default
+                    masquerade: {}
+                  networkInterfaceMultiqueue: true
+                  rng: {}
+                machine:
+                  type: pc-q35-rhel8.4.0
+                resources:
+                  requests:
+                    memory: 2Gi
+              evictionStrategy: LiveMigrate
+              hostname: "{{ vm_name }}"
+              networks:
+              - name: default
+                pod: {}
+              terminationGracePeriodSeconds: 180
+              volumes:
+              - dataVolume:
+                  name: "{{ vm_name }}"
+                name: "{{ vm_name }}"
+              - name: cloudinitdisk
+                cloudInitNoCloud:
+                  userData: |-
+                    #cloud-config
+                    hostname: {{ vm_name }}
+                    fqdn: {{ vm_name }}.local
+                    create_hostname_file: true
+                    user: {{ vm_user }}
+                    password: {{ vm_pass }}
+                    chpasswd: { expire: False }
+                    ssh_authorized_keys:
+                    - {{ lookup('ansible.builtin.file', '{{ ssh_key_file }}') }}
+                    write_files:
+                    - path: /var/www/cgi-bin/dbtest
+                      permissions: "0755"
+                      content: |
+                        #!/bin/bash
+                        TARGET="telnet://database:3306"
+                        START='<html><head><title>Database Test</title></head><body>'
+                        MESSAGE=''
+                        FINISH='</body></html>'
+
+                        echo -n 'Content-type: text/html; charset=UTF-8'
+                        echo -en '\r\n\r\n'
+
+                        curl --max-time 5 --output /dev/null "${TARGET}" &> /dev/null <<< "test"
+                        RET=$?
+                        if [ $RET -eq 0 -o $RET -eq 28 -o $RET -eq 56 ]
+                        then
+                            MESSAGE='<p style="color:green;">PASS</p>'
+                        else
+                            MESSAGE='<p style="color:red;">FAIL</p>'
+                        fi
+
+                        printf "%s\n%s\n%s\n" "${START}" "${MESSAGE}" "${FINISH}"
+                    runcmd:
+                    - useradd -G wheel developer
+                    - restorecon -vR /var/www/html/*
+                    - systemctl enable --now sshd
+                    - firewall-cmd --permanent --zone=public --add-port=80/tcp
+                    - firewall-cmd --permanent --zone=public --add-service=http
+                    - firewall-cmd --permanent --zone=public --add-port=22/tcp
+                    - firewall-cmd --permanent --zone=public --add-service=ssh
+                    - firewall-cmd --reload
+...

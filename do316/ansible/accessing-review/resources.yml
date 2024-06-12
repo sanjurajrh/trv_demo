@@ -1,0 +1,162 @@
+---
+- name: Deploy virtctl client
+  import_playbook: ../roles/deploy-virtctl.yml
+
+- name: VMs and datavolumes
+  hosts: utility
+  remote_user: lab
+  gather_facts: False
+  module_defaults:
+    group/k8s:
+      host: "{{ ocp_cluster['host'] }}"
+      kubeconfig: "{{ ocp_cluster['kubeconfig'] }}"
+      validate_certs: "{{ ocp_cluster['validate_certs'] }}"
+  vars:
+    vm_namespace: [vm-images, development-db, staging-db]
+    vm_name: mariadb
+    vm_app: mariadb
+    utility_url: http://utility.lab.example.com:8080/openshift4/images/
+    vm_qcow2: mariadb-server.qcow2
+    vm_access_mode: ReadWriteMany
+    vm_size: 15Gi
+    vm_sc_name: ocs-external-storagecluster-ceph-rbd-virtualization
+    vm_sc_mode: Block
+    users: [dbadmin1, dbadmin2, developer]
+  tasks:
+    - name: Create {{ item }} project
+      k8s:
+        state: present
+        inline:
+          apiVersion: project.openshift.io/v1
+          kind: Project
+          metadata:
+            name: "{{ item }}"
+      with_items:
+        - "{{ vm_namespace }}"
+    - include: role-tasks.yml
+    - name: Create {{ vm_name }} vm and dv
+      k8s:
+        state: present
+        namespace: "{{ vm_namespace[0] }}"
+        inline:
+          apiVersion: kubevirt.io/v1
+          kind: VirtualMachine
+          metadata:
+            name: "{{ vm_name }}"
+            namespace: "{{ vm_namespace[0] }}"
+            labels:
+              app: "{{ vm_app }}"
+              kubevirt.io/vm: "{{ vm_name }}"
+              flavor.template.kubevirt.io/small: 'true'
+              os.template.kubevirt.io/rhel8.4: 'true'
+              vm.kubevirt.io/template: rhel8-server-small
+              vm.kubevirt.io/template.namespace: openshift
+              vm.kubevirt.io/template.revision: '1'
+              vm.kubevirt.io/template.version: v0.26.2
+              workload.template.kubevirt.io/server: 'true'
+          spec:
+            dataVolumeTemplates:
+              - apiVersion: cdi.kubevirt.io/v1beta1
+                kind: DataVolume
+                metadata:
+                  name: "{{ vm_name }}"
+                spec:
+                  pvc:
+                    accessModes:
+                    - "{{ vm_access_mode }}"
+                    resources:
+                      requests:
+                        storage: "{{ vm_size }}"
+                    storageClassName: "{{ vm_sc_name }}"
+                    volumeMode: "{{ vm_sc_mode }}"
+                  source:
+                    http:
+                      url: "{{ utility_url}}{{ vm_qcow2 }}"
+            runStrategy: RerunOnFailure
+            template:
+              metadata:
+                labels:
+                  app: "{{ vm_app }}"
+                  flavor.template.kubevirt.io/small: 'true'
+                  kubevirt.io/domain: "{{ vm_name }}"
+                  kubevirt.io/size: small
+                  os.template.kubevirt.io/rhel8.4: 'true'
+                  workload.template.kubevirt.io/server: 'true'
+              spec:
+                domain:
+                  cpu:
+                    cores: 1
+                    sockets: 1
+                    threads: 1
+                  devices:
+                    disks:
+                      - bootOrder: 1
+                        disk:
+                          bus: virtio
+                        name: "{{ vm_name }}"
+                      - disk:
+                          bus: virtio
+                        name: cloudinitdisk
+                    interfaces:
+                      - name: default
+                        masquerade: {}
+                    networkInterfaceMultiqueue: true
+                    rng: {}
+                  machine:
+                    type: pc-q35-rhel8.4.0
+                  resources:
+                    requests:
+                      memory: 2Gi
+                evictionStrategy: LiveMigrate
+                hostname: "{{ vm_name }}"
+                networks:
+                  - name: default
+                    pod: {}
+                terminationGracePeriodSeconds: 180
+                volumes:
+                  - dataVolume:
+                      name: "{{ vm_name }}"
+                    name: "{{ vm_name }}"
+                  - cloudInitNoCloud:
+                      userData: |-
+                        #cloud-config
+                        user: developer
+                        password: developer
+                        chpasswd: { expire: False }
+                        swap:
+                          filename: /swap
+                          size: "auto"
+                          maxsize: 2000000
+                        write_files:
+                        - path: /var/stress-load.sh
+                          permissions: '0750'
+                          content: |
+                            #! /bin/bash
+                            stress -c 2 -d 6 -i 2 -m 4 --vm-bytes 256M -t 60s
+                          owner: root:root
+                          defer: true
+                        - path: /etc/cron.d/stress
+                          permissions: '0644'
+                          defer: true
+                          content: "*/1 * * * * root /var/stress-load.sh\n"
+                          owner: root:root
+                        power_state:
+                          delay: 1
+                          mode: poweroff
+                          timeout: 60
+                    name: cloudinitdisk
+        wait: yes
+        wait_condition:
+          type: Ready
+          status: "True"
+        wait_sleep: 60
+        wait_timeout: 360
+    - name: Pause to allow mariadb image time to customize
+      pause:
+        minutes: 1
+    - name: Delete VM and preserve DV
+      command: >
+        oc delete vm {{ vm_name }} -n {{ vm_namespace[0] }} --cascade=orphan
+    - name: Delete VMI
+      command: >
+        oc delete vmi {{ vm_name }} -n {{ vm_namespace[0] }}

@@ -1,0 +1,387 @@
+---
+- name: Deploy virtctl client
+  import_playbook: ../roles/deploy-virtctl.yml
+
+- name: VMs and datavolumes
+  hosts: utility
+  remote_user: lab
+  gather_facts: False
+  module_defaults:
+    group/k8s:
+      host: "{{ ocp_cluster['host'] }}"
+      kubeconfig: "{{ ocp_cluster['kubeconfig'] }}"
+      validate_certs: "{{ ocp_cluster['validate_certs'] }}"
+  vars:
+    vm_namespace: [developers-vms, testing-vms, production-vms]
+    vm_name: [developers-mariadb, testing-mariadb, production-mariadb]
+    vm_app: [developersdb, testingdb, productiondb]
+    utility_url: http://utility.lab.example.com:8080/openshift4/images/
+    vm_qcow2: mariadb-server.qcow2
+    dv_name: mariadb-server
+    dv_namespace: vm-images
+    vm_access_mode: ReadWriteMany
+    vm_size: 10Gi
+    vm_sc_name: ocs-external-storagecluster-ceph-rbd-virtualization
+    vm_sc_mode: Block
+  tasks:
+    - name: Create {{ item }} project
+      k8s:
+        state: present
+        inline:
+          apiVersion: project.openshift.io/v1
+          kind: Project
+          metadata:
+            name: "{{ item }}"
+      with_items:
+        - "{{ vm_namespace }}"
+        - "{{ dv_namespace }}"
+    - include: role-tasks.yml
+    - include: login-users.yml
+    - name: Create DV for VMs
+      k8s:
+        state: present
+        inline:
+          apiVersion: cdi.kubevirt.io/v1beta1
+          kind: DataVolume
+          metadata:
+            name: "{{ dv_name }}"
+            namespace: "{{ dv_namespace }}"
+          spec:
+            source:
+              http:
+                url: "{{ utility_url}}{{ vm_qcow2 }}"
+            pvc:
+              accessModes:
+              - "{{ vm_access_mode }}"
+              volumeMode: "{{ vm_sc_mode }}"
+              resources:
+                requests:
+                  storage: "{{ vm_size }}"
+              storageClassName: "{{ vm_sc_name }}"
+    - name: Create {{ vm_name[0] }} vm and dv
+      k8s:
+        state: present
+        namespace: "{{ vm_namespace[0] }}"
+        inline:
+          apiVersion: kubevirt.io/v1
+          kind: VirtualMachine
+          metadata:
+            name: "{{ vm_name[0] }}"
+            namespace: "{{ vm_namespace[0] }}"
+            labels:
+              app: "{{ vm_app[0] }}"
+              kubevirt.io/vm: "{{ vm_name[0] }}"
+              flavor.template.kubevirt.io/small: 'true'
+              os.template.kubevirt.io/rhel8.4: 'true'
+              vm.kubevirt.io/template: rhel8-server-small
+              vm.kubevirt.io/template.namespace: openshift
+              vm.kubevirt.io/template.revision: '1'
+              vm.kubevirt.io/template.version: v0.16.2
+              workload.template.kubevirt.io/server: 'true'
+          spec:
+            dataVolumeTemplates:
+              - apiVersion: cdi.kubevirt.io/v1beta1
+                kind: DataVolume
+                metadata:
+                  name: "{{ vm_name[0] }}"
+                spec:
+                  pvc:
+                    accessModes:
+                    - "{{ vm_access_mode }}"
+                    resources:
+                      requests:
+                        storage: "{{ vm_size }}"
+                    storageClassName: "{{ vm_sc_name }}"
+                    volumeMode: "{{ vm_sc_mode }}"
+                  source:
+                    pvc:
+                      namespace: "{{ dv_namespace }}"
+                      name: "{{ dv_name }}"
+            runStrategy: RerunOnFailure
+            template:
+              metadata:
+                labels:
+                  app: "{{ vm_app[0] }}"
+                  flavor.template.kubevirt.io/small: 'true'
+                  kubevirt.io/domain: "{{ vm_name[0] }}"
+                  kubevirt.io/size: small
+                  os.template.kubevirt.io/rhel8.4: 'true'
+                  workload.template.kubevirt.io/server: 'true'
+              spec:
+                domain:
+                  cpu:
+                    cores: 1
+                    sockets: 1
+                    threads: 1
+                  devices:
+                    disks:
+                      - bootOrder: 1
+                        disk:
+                          bus: virtio
+                        name: "{{ vm_name[0] }}"
+                      - disk:
+                          bus: virtio
+                        name: cloudinitdisk
+                    interfaces:
+                      - name: default
+                        masquerade: {}
+                    networkInterfaceMultiqueue: true
+                    rng: {}
+                  machine:
+                    type: pc-q35-rhel8.4.0
+                  resources:
+                    requests:
+                      memory: 2Gi
+                evictionStrategy: LiveMigrate
+                hostname: "{{ vm_name[0] }}"
+                networks:
+                  - name: default
+                    pod: {}
+                terminationGracePeriodSeconds: 180
+                volumes:
+                  - dataVolume:
+                      name: "{{ vm_name[0] }}"
+                    name: "{{ vm_name[0] }}"
+                  - cloudInitNoCloud:
+                      userData: |-
+                        #cloud-config
+                        user: developer
+                        password: developer
+                        chpasswd: { expire: False }
+                        swap:
+                          filename: /swap
+                          size: "auto"
+                          maxsize: 2000000
+                        write_files:
+                        - path: /home/developer/stress-load.sh
+                          permissions: '0750'
+                          content: |
+                            #! /bin/bash
+                            stress -c 2 -d 6 -i 2 -m 4 --vm-bytes 256M -t 120s
+                          owner: developer:developer
+                          defer: true
+                    name: cloudinitdisk
+        wait: yes
+        wait_condition:
+          type: Ready
+          status: "True"
+        wait_sleep: 60
+        wait_timeout: 1800
+    - name: Create {{ vm_name[1] }} vm and dv
+      k8s:
+        state: present
+        namespace: "{{ vm_namespace[1] }}"
+        inline:
+          apiVersion: kubevirt.io/v1
+          kind: VirtualMachine
+          metadata:
+            name: "{{ vm_name[1] }}"
+            namespace: "{{ vm_namespace[1] }}"
+            labels:
+              app: "{{ vm_app[1] }}"
+              kubevirt.io/vm: "{{ vm_name[1] }}"
+              flavor.template.kubevirt.io/small: 'true'
+              os.template.kubevirt.io/rhel8.4: 'true'
+              vm.kubevirt.io/template: rhel8-server-small
+              vm.kubevirt.io/template.namespace: openshift
+              vm.kubevirt.io/template.revision: '1'
+              vm.kubevirt.io/template.version: v0.16.2
+              workload.template.kubevirt.io/server: 'true'
+          spec:
+            dataVolumeTemplates:
+              - apiVersion: cdi.kubevirt.io/v1beta1
+                kind: DataVolume
+                metadata:
+                  name: "{{ vm_name[1] }}"
+                spec:
+                  pvc:
+                    accessModes:
+                    - "{{ vm_access_mode }}"
+                    resources:
+                      requests:
+                        storage: "{{ vm_size }}"
+                    storageClassName: "{{ vm_sc_name }}"
+                    volumeMode: "{{ vm_sc_mode }}"
+                  source:
+                    pvc:
+                      namespace: "{{ dv_namespace }}"
+                      name: "{{ dv_name }}"
+            runStrategy: RerunOnFailure
+            template:
+              metadata:
+                labels:
+                  app: "{{ vm_app[1] }}"
+                  flavor.template.kubevirt.io/small: 'true'
+                  kubevirt.io/domain: "{{ vm_name[1] }}"
+                  kubevirt.io/size: small
+                  os.template.kubevirt.io/rhel8.4: 'true'
+                  workload.template.kubevirt.io/server: 'true'
+              spec:
+                domain:
+                  cpu:
+                    cores: 1
+                    sockets: 1
+                    threads: 1
+                  devices:
+                    disks:
+                      - bootOrder: 1
+                        disk:
+                          bus: virtio
+                        name: "{{ vm_name[1] }}"
+                      - disk:
+                          bus: virtio
+                        name: cloudinitdisk
+                    interfaces:
+                      - name: default
+                        masquerade: {}
+                    networkInterfaceMultiqueue: true
+                    rng: {}
+                  machine:
+                    type: pc-q35-rhel8.4.0
+                  resources:
+                    requests:
+                      memory: 2Gi
+                evictionStrategy: LiveMigrate
+                hostname: "{{ vm_name[1] }}"
+                networks:
+                  - name: default
+                    pod: {}
+                terminationGracePeriodSeconds: 180
+                volumes:
+                  - dataVolume:
+                      name: "{{ vm_name[1] }}"
+                    name: "{{ vm_name[1] }}"
+                  - cloudInitNoCloud:
+                      userData: |-
+                        #cloud-config
+                        user: developer
+                        password: developer
+                        chpasswd: { expire: False }
+                        swap:
+                          filename: /swap
+                          size: "auto"
+                          maxsize: 2000000
+                        write_files:
+                        - path: /home/developer/stress-load.sh
+                          permissions: '0750'
+                          content: |
+                            #! /bin/bash
+                            stress -c 6 -d 4 -i 8 -m 1 --vm-bytes 1G -t 120s
+                          owner: developer:developer
+                          defer: true
+                    name: cloudinitdisk
+        wait: yes
+        wait_condition:
+          type: Ready
+          status: "True"
+        wait_sleep: 60
+        wait_timeout: 1800
+    - name: Create {{ vm_name[2] }} vm and dv
+      k8s:
+        state: present
+        namespace: "{{ vm_namespace[2] }}"
+        inline:
+          apiVersion: kubevirt.io/v1
+          kind: VirtualMachine
+          metadata:
+            name: "{{ vm_name[2] }}"
+            namespace: "{{ vm_namespace[2] }}"
+            labels:
+              app: "{{ vm_app[2] }}"
+              kubevirt.io/vm: "{{ vm_name[2] }}"
+              flavor.template.kubevirt.io/small: 'true'
+              os.template.kubevirt.io/rhel8.4: 'true'
+              vm.kubevirt.io/template: rhel8-server-small
+              vm.kubevirt.io/template.namespace: openshift
+              vm.kubevirt.io/template.revision: '1'
+              vm.kubevirt.io/template.version: v0.16.2
+              workload.template.kubevirt.io/server: 'true'
+          spec:
+            dataVolumeTemplates:
+              - apiVersion: cdi.kubevirt.io/v1beta1
+                kind: DataVolume
+                metadata:
+                  name: "{{ vm_name[2] }}"
+                spec:
+                  pvc:
+                    accessModes:
+                    - "{{ vm_access_mode }}"
+                    resources:
+                      requests:
+                        storage: "{{ vm_size }}"
+                    storageClassName: "{{ vm_sc_name }}"
+                    volumeMode: "{{ vm_sc_mode }}"
+                  source:
+                    pvc:
+                      namespace: "{{ dv_namespace }}"
+                      name: "{{ dv_name }}"
+            runStrategy: RerunOnFailure
+            template:
+              metadata:
+                labels:
+                  app: "{{ vm_app[2] }}"
+                  flavor.template.kubevirt.io/small: 'true'
+                  kubevirt.io/domain: "{{ vm_name[2] }}"
+                  kubevirt.io/size: small
+                  os.template.kubevirt.io/rhel8.4: 'true'
+                  workload.template.kubevirt.io/server: 'true'
+              spec:
+                domain:
+                  cpu:
+                    cores: 1
+                    sockets: 1
+                    threads: 1
+                  devices:
+                    disks:
+                      - bootOrder: 1
+                        disk:
+                          bus: virtio
+                        name: "{{ vm_name[2] }}"
+                      - disk:
+                          bus: virtio
+                        name: cloudinitdisk
+                    interfaces:
+                      - name: default
+                        masquerade: {}
+                    networkInterfaceMultiqueue: true
+                    rng: {}
+                  machine:
+                    type: pc-q35-rhel8.4.0
+                  resources:
+                    requests:
+                      memory: 2Gi
+                evictionStrategy: LiveMigrate
+                hostname: "{{ vm_name[2] }}"
+                networks:
+                  - name: default
+                    pod: {}
+                terminationGracePeriodSeconds: 180
+                volumes:
+                  - dataVolume:
+                      name: "{{ vm_name[2] }}"
+                    name: "{{ vm_name[2] }}"
+                  - cloudInitNoCloud:
+                      userData: |-
+                        #cloud-config
+                        user: developer
+                        password: developer
+                        chpasswd: { expire: False }
+                        swap:
+                          filename: /swap
+                          size: "auto"
+                          maxsize: 2000000
+                        write_files:
+                        - path: /home/developer/stress-load.sh
+                          permissions: '0750'
+                          content: |
+                            #! /bin/bash
+                            stress -c 8 -d 2 -i 6 -m 1 --vm-bytes 1G -t 120s
+                          owner: developer:developer
+                          defer: true
+                    name: cloudinitdisk
+        wait: yes
+        wait_condition:
+          type: Ready
+          status: "True"
+        wait_sleep: 60
+        wait_timeout: 1800

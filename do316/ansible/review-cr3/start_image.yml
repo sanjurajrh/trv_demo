@@ -1,0 +1,35 @@
+---
+- name: Prepare the utility system for lab
+  hosts: utility
+  remote_user: lab
+  gather_facts: false
+  become: true
+
+  tasks:
+    - name: Ensure the disk image for web1 is available through HTTP
+      copy:
+        src: web1.qcow2
+        dest: /var/www/html/openshift4/images/review-cr3-web1.qcow2
+        group: root
+        owner: root
+        mode: 0644
+        setype: httpd_sys_content_t
+
+    - name: Ensure the disk image for web2 is available through HTTP
+      copy:
+        src: web2.qcow2
+        dest: /var/www/html/openshift4/images/review-cr3-web2.qcow2
+        group: root
+        owner: root
+        mode: 0644
+        setype: httpd_sys_content_t
+
+    - name: Ensure the mount.sh script is available through HTTP
+      copy:
+        src: mount.sh
+        dest: /var/www/html/mount.sh
+        group: root
+        owner: root
+        mode: 0644
+        setype: httpd_sys_content_t
+...

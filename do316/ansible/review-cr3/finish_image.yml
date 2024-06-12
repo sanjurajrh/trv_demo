@@ -1,0 +1,23 @@
+---
+- name: Cleanup the utility system after lab
+  hosts: utility
+  remote_user: lab
+  gather_facts: false
+  become: true
+
+  tasks:
+    - name: Ensure the disk image for web1 does not exist
+      file:
+        path: /var/www/html/openshift4/images/review-cr3-web1.qcow2
+        state: absent
+
+    - name: Ensure the disk image for web2 does not exist
+      file:
+        path: /var/www/html/openshift4/images/review-cr3-web2.qcow2
+        state: absent
+
+    - name: Ensure the mount.sh script is removed
+      file:
+        path: /var/www/html/mount.sh
+        state: absent
+...
