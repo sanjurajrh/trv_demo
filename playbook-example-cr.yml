@@ -1,0 +1,28 @@
+---
+- name: Playbook execution using Satellite example
+  hosts: all
+  tasks:
+  - name: Change the default banner
+    copy:
+      content: |
+        "Welcome to the RH403 course,
+         Comprehensive Review chapter"
+
+      dest: /etc/issue
+      owner: root
+      group: root
+      mode: 0644
+
+  - name: Customize the ssh banner
+    lineinfile:
+      dest: /etc/ssh/sshd_config
+      regexp: "(?i)^#?Banner"
+      line: Banner /etc/issue
+      validate: /usr/sbin/sshd -tf %s
+    notify:
+    - restart sshd
+  handlers:
+  - name: restart sshd
+    service:
+      name: sshd
+      state: restarted
