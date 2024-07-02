@@ -8,7 +8,8 @@
 			https://console-openshift-console.apps.ocp4.example.com. You can
 			access the cluster using the account admin with redhatocp as the password. 
 			There is a developer account with developer as the password. 
-			The oc command is available on the workstation machine.</li>
+			The oc command is available on the workstation machine. The machines worker01 and work02 are assigned with a 
+			label orgnet=true</li>
 		<li> Q1 Install the OpenShift Virtualization Operator in the openshift-cnv namespace. Use the
 			stable channel and configure the operator for automatic update approval. Use the default
 			options when creating the HyperConverged instance.</li>
@@ -20,6 +21,28 @@
 			The storage class used for root disk should be ocs-external-storagecluster-ceph-rbd-virtualization. 
 			The template should be modified to use the name of the root disk data volume to the name of the Virtual Machine 
 			that the template creates. The Virtual machine should be called as web1.</li>
-		
+		<li> Q3 The worker01 and worker02 cluster nodes have an ens4 network interface, which is
+                        connected to an additional network. Create a Linux bridge named br0 on each node, and
+                        then add the ens4 interface to that bridge. Configure the bridge interface to request an IPv4
+                        address from DHCP. Use the orgnet: true label to select the nodes to configure.</li>
+		<li> Q4 Add a second interface named nic-0, which is connected to the bridge that is declared in another exam item.</li>
+		<li> Q5 Create a network attachment definition resource called ext-net in the project1 namespace using the "CNV Linux Bridge" 
+			as the Network Type and br0 as the Bridge.</li>
+		<li> Q6 </li>
 	</body>
+
+
+	i) Install the OpenShift virtualization Operator
+ii) Create a VM using the existing Template as user developer on a project project1 (Extra details are provided with the question)
+iii) Add the aditional ethernet card to the VM (NetworkAttachment Definition has to be created)
+iv) Add additional disk to the VM using the storage class (RBD) of size 5GB.
+v) Create a clone of the existing vm name it as Myclone
+vi) Create Custom Template based on rhel8 template. Disk size 15 and it should install particular rpm when you start it. SSH public key to be added.
+vii) Install mariadb-server and start/enable mariadb & Configure liveness Probe. Port 3306, InitialDelaySeconds 120s, timeoutSeconds - 5
+viii) Live migration happen between master01 & master02. Provided with labels of those 2 nodes. (Hint: Simply add nodeSelector into VM)
+ix) Application should start on worker01 and worker02 but in case of failure it should start anywhere 
+x) Deploy 2 Vms. One user should have view access while other user should have edit access
+xi) Deploy web server and it should be limited ti same project only. (Hint: Networkpolicy)
+xii) Create 2 VM, based on 2 given templates and 2 qcow2 images. VM1 has to mount /var/www/html. Copy data from /var/www/html to the second hard disk. Unplug the 2nd disk and attach to VM2. Mounting has to be done permanently on the 2nd VM. Set SELINUX label as well
+xiii) Based on the template created earlier, create 2 VM. create service where port & NodePort will be given. Create route. telnet route 30023 -- It should print some ASCII message
 </html>
