@@ -1,0 +1,14 @@
+<html>
+	<head>
+		<title>Practice</title>
+	</head>
+	<body>
+		<li> Instructions:</li>
+		<li> The OCP cluster API endpoints is https://api.ocp4.example.com:6443 and the web console is available at https://console-openshift-console.apps.ocp4.example.com. You can
+			access the cluster using the account admin with redhatocp as the password. There is a developer account with developer as the password. The oc command is available on the workstation machine.</li>
+		<li> Q1 Install the OpenShift Virtualization Operator in the openshift-cnv namespace. Use the
+			stable channel and configure the operator for automatic update approval. Use the default
+			options when creating the HyperConverged instance.</li>
+		<li> Q2 Create a Virtual Machine using the existing template as user developer on a project project1 using the template called dev-web-rhel8 which is provided by Red Hat Training. The operating system supported is Red Hat Enterprise Linux 8.0 or higher. The Boot disk URL should be http://utility.lab.example.com:8080/openshift4/images/helloworld.qcow2. The Workload type should be Server with Tiny Size. The root disk size should be 10GiB. The root disk interface should be virtio. The storage class used for root disk should be ocs-external-storagecluster-ceph-rbd-virtualization. The template should be modified to use the name of the root disk data volume to the name of the Virtual Machine that the template creates. The Virtual machine should be called as web1.</li>
+	</body>
+</html>
