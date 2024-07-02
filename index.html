@@ -13,10 +13,12 @@
 		<li> 
 1 - Deploy OpenShift Virtualization
 	Install OpenShift Virtualization in openshift-cnv project. Install and configure kubevirt-converged in the same project.
-	
+			<br></li>
+<li>	
 2 - Resume a node from maintenance mode
 	the node must be able to accept pods and be ready.
-
+</li>
+		<li>
 3 - Deploy a VM and configure access to it
 	* Deploy RH in a specific project the image is specified, 
 	* The HDD is 30Gi the name is machine1, 
@@ -24,42 +26,52 @@
 	* The password must be in cloud-init. 
 	* SSH must be used.
 	* A user can view the metrics
-
+		</li>
+		<li>
 4 - Configure a web server in a VM
 	* Install http package
 	* The index.html must exist in /var/www/html
 	* create a Network policy
 	* The Network Policy restrict the project 
 	* Only access to port 80
-
+</li>
+		<li>
 5 - Deploy a multihomed VM
 	* the VM runs in a specific project
 	* volume is 30Gi, flavour is small, type server
 	* create first and second NIC, one default and the other one bridge
-
+</li>
+		<li>
 6 - Manage storage for VM
 	* Create 2 VMs using the respective templates
 	* Move the disk from VM1 to VM2 without loosing the data
 	* on the 2nd VM create a disk (details are given)
-
+</li>
+		<li>
 7 - Create a VM Template (details are given)
-	
+	</li>
+		<li>
 8 - Create a service using a VM Load Balancing
 	* create 2 VMs using a provided template
 	* Create a service called service-1, type NodePort, pod selector (provided), Ports 23 and 30023
 	* Create a Route called route-1 so that the service is available at service-1.example.com
-	
+	</li>
+		<li>
 9 - Create a VM snapshot (details provided)
-	
+	</li>
+		<li>
 10 - Configure VM migration
 	VM1 must be able to migrate between the nodes with specific label only and not in any other nodes.
-
+</li>
+		<li>
 11 - VM Cloning (details provided)
-
+</li>
+		<li>
 12 - Configure Liveness probe
 	Configure liveness probe for a MariaDB db. The port is 3306. other details are specified.
 	
-	
+	</li>
+		<li>
 13 - Prepare a VM from a node failure
 	 * Create a VM; the VM can only run on master1 and master2 and must migrate automatically to another node in case of failure.
 	</li>
