@@ -1,0 +1,27 @@
+<html>
+<head>
+	<title>Welcome OpenShift</title>
+</head>
+<body>
+	<h1>Welcome to OpenShift!</h1>
+	<p><li>The cluster can be accessed using the Web Console https://console-openshift-console.apps.ocp4.example.com.</li><li>The API URL is https://api.ocp4.example.com:6443.</li><li>The user to be used for accessing the admin with the password of redhatocp.</li><li>The registry server available is registry.ocp4.example.com:8443 and can be accessed using the account developer with password of developer.</li></p>
+	<li>Create the DataScience Project named researchteam. The user bhobbs should have edit permissions on the researchteam. The workbench named logistics which uses Pytorch version 2.0.1 which uses 2 cpu,8Gi Memory, 3Gi persistent storage. Test the workbench. Stop the workbench.</li><br>
+
+	<li>Ensure that Large and XLarge notebook size is not available for the workbench. Create a new notebook named Micro with limits of 2cpus and 2Gi memory and requests of 1cpu and 1Gi memory. This should be available in the RHOAI dashboard.</li><br>
+	<li>Modify the user access as follows:
+		<ol>There should be group called researchteam with bhobbs, psintx and supatree as the members of that group. The group researchteam should not have the administrative access to the RHOAI dashboard.</ol>
+		<ol>The users bernard and jbells should have administrative access to the RHOAI dashboard.</ol>
+		<ol>No other user should have access to the RHOAI except the cluster-admins group and researchteam members.</ol>
+	</li><br>
+	<li>Add a data connection:
+		<ol>Modify the workbench alpha running inside the project hyperion to use Standard Data Science Image.</ol>
+		<ol>Create a data connection using the file /home/student/.s3cfg. Use the value of access key, secret key and host_base as the access key, secret key and endpoint from the file. Ensure that the bucket name is ferritin. The Workbench alpha should also have a configmap with the key called RANDOM_SIZE created with the value as 50. Clone the git hub repository https://github.com/RedHatTraining/AI26X-apps. Stop the workbench after testing.</ol>
+	</li><br>
+	<li>Create a notebook image using the following information:
+		<ol>Use the /home/student/custom-image directory for creating the image called ex267-custom-server.</ol>
+		<ol>The Containerfile and requirements.txt file is provided under the /home/student/custom-image directory. Use that to build an image with the name registry.ocp4.example.com:8443/custom/ex267-custom-image:2024v1.</ol>
+		<ol>The Notebook image ex267-custom-server should have the description set as "Custom image for ex267"</ol>
+		<ol>The Notebook image should have the Pythonv3.9 software and the packages as per the requirements.txt file.</ol>
+	</li><br>
+</body>
+</html>

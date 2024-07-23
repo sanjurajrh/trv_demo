@@ -1,0 +1,10 @@
+FROM registry.ocp4.example.com:8443/opendatahub/workbench-images:jupyter-datascience-ubi9-python-3.9-2023b-20240219-ffe72a0
+
+COPY requirements.txt ./
+RUN echo "Installing softwares and packages" && \
+    pip install micropipenv && \
+    micropipenv install && \
+    rm -f ./requirements.txt
+
+RUN chmod -R g+w /opt/app-root/lib/python3.9/site-packages && \
+    fix-permissions /opt/app-root -P
