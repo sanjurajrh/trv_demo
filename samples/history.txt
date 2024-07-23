@@ -1,0 +1,113 @@
+    1  oc login -u admin -p redhatocp https://api.ocp4.example.com:6443
+    2  ssh lab@utility
+    3  oc login -u admin -p redhatocp https://api.ocp4.example.com:6443
+    4  oc get oauth/cluster -o yaml 
+    5  sudo yum provides htpasswd
+    6  sudo yum install httpd-tools
+    7  oc get secret -n openshift-config
+    8  oc get secret/htpasswd-secret -n openshift-config -o yaml 
+    9  echo "YWRtaW46JGFwcjEkNVNTQnU4ZHYkUG9TNXlYc0V1R2xSV1hPSEJaUEhJLgpkZXZlbG9wZXI6JGFwcjEkT2hUQU9QWEUkTklKN3cuUXZrVEowNldZaTRnLkUyLwo=" | base64 -d 
+   10  htpasswd -mc myusers bhobbs redhatocp
+   11  htpasswd -mc myusers -b bhobbs redhatocp
+   12  htpasswd -c -b -m myusers  bhobbs redhatocp
+   13  cat myusers 
+   14  echo "YWRtaW46JGFwcjEkNVNTQnU4ZHYkUG9TNXlYc0V1R2xSV1hPSEJaUEhJLgpkZXZlbG9wZXI6JGFwcjEkT2hUQU9QWEUkTklKN3cuUXZrVEowNldZaTRnLkUyLwo=" | base64 -d 
+   15  htpasswd -b -m myusers psintx redhatocp
+   16  htpasswd -b -m myusers supatree redhatocp
+   17  htpasswd -b -m myusers bernard redhatocp
+   18  htpasswd -b -m myusers jbells redhatocp
+   19  vim myusers 
+   20  oc whoami 
+   21  oc get route -n openshift-console 
+   22  firefox console-openshift-console.apps.ocp4.example.com & 
+   23  cat myusers 
+   24  oc get pod -n openshift-authentication
+   25  watch oc get pod -n openshift-authentication
+   26  oc project hyperion 
+   27  MANIFEST_HOST="https://raw.githubusercontent.com"
+   28  wget $MANIFEST_HOST/RedHatTraining/AI26X-apps/main/intro/projects-data/minio.yaml
+   29  vim minio.yaml 
+   30  oc apply -f minio.yaml
+   31  oc get all
+   32  oc get pods -w
+   33  oc get route 
+   34  firefox minio-ui-hyperion.apps.ocp4.example.com & 
+   35  vim .s3cfg
+   36  cat .s3cfg
+   37  ls
+   38  mkdir custom-image
+   39  vim custom-image/Containerfile
+   40  vim custom-image/requirements.txt
+   41  pip list 
+   42  pip list  | grep scikit
+   43  pip list  | grep pandas
+   44  pip list  | grep numpy
+   45  pip search numpy
+   46  python3
+   47  pip install numpy
+   48  pip list  | grep numpy
+   49  vim custom-image/requirements.txt
+   50  pip install pandas
+   51  vim custom-image/requirements.txt
+   52  pip install scikit-learn 
+   53  pip list  | grep scikit-learn
+   54  vim custom-image/requirements.txt
+   55  ls
+   56  ls custom-image/
+   57  cd custom-image/
+   58  ls
+   59  podman login registry.ocp4.example.com:8443 -u developer -p developer 
+   60  podman build -t registry.ocp4.example.com/custom/ex267-custom-image:2024v1 . 
+   61  podman images 
+   62  podman push registry.ocp4.example.com/custom/ex267-custom-image:2024v1 
+   63  podman images 
+   64  podman tag 32818428fe02 registry.ocp4.example.com:8443/custom/ex267-custom-image:2024v1
+   65  podman images 
+   66  podman rmi registry.ocp4.example.com/custom/ex267-custom-image:2024v1
+   67  podman images 
+   68  podman  push registry.ocp4.example.com:8443/custom/ex267-custom-image:2024v1
+   69  cat requirements.txt 
+   70  podman images 
+   71  podman rmi 769eda83a903 
+   72  podman rmi 32818428fe023
+   73  podman rmi 32818428fe02
+   74  podman images 
+   75  podman ps -a 
+   76  cd
+   77  ls 
+   78  mv minio.yaml Documents/
+   79  mv myusers Do
+   80  mv Do Documents/
+   81  ls
+   82  ls -a
+   83  ssh utility -l root 
+   84  oc get route -n openshift-console 
+   85  sudo =-i
+   86  sudo -i 
+   87  ls -a
+   88  sudo yum install gnome-extensions-app.x86_64 ions
+   89  sudo yum install gnome-extensions-app.x86_64 
+   90  sudo yum install gnome-tweaks 
+   91  ssh ab@utility
+   92  ssh lab@utility
+   93  ls /var/www/html/index.html 
+   94  git clone https://github.com/sanjurajrh/trv_demo.git
+   95  cp /var/www/html/index.html trv_demo/samples/
+   96  ls -l trv_demo/samples/
+   97  history 
+   98  rsync -av custom-image trv_demo/samples/
+   99  rsync -av .s3cfg trv_demo/samples/
+  100  ls -l trv_demo/samples/
+  101  ls -al trv_demo/samples/
+  102  ls -al trv_demo/samples/custom-image/
+  103  history 
+  104  ls Documents/
+  105  rsync -av Documents/Do trv_demo/samples/
+  106  cd trv_demo/
+  107  git add .
+  108  git commit -m "new files added"
+  109  git push 
+  110  cd
+  111  history 
+  112  history | less
+  113  history > history.txt
