@@ -35,33 +35,51 @@ Migrate Virtual Machines from Compatible Hypervisors
 </li>
 		<li>
 3 - Deploy a VM and configure access to it
-	* Deploy RH in a specific project the image is specified, 
-	* The HDD is 30Gi the name is machine1, 
+	* Deploy RHEL9.2 in a project ramtops.
+        * The user verence-ii should be able to create and update the virtual machine in ramtops project.
+        * The image is http://utility.lab.example.com:8080/openshift4/images/rhel-9.2-x86_64-vm.qcow2
+	* The persistent storage is 30Gi the name is lancre.
+        * The storage class to be used ocs-external-storagecluster-ceph-rbd.
 	* The flavour is small, type server. 
-	* The password must be in cloud-init. 
-	* SSH must be used.
-	* A user can view the metrics
+	* The virtual machine should have a user verence-ii with the password as redhatocp. This has to be done using cloud-init. 
+	* SSH must be used from the /home/opsadm/.ssh/id_rsa_ex316.pub
+	* A user moist can view the metrics of the virtual machine. 
+	* The user moist should also be able to start,stop,pause and restart the virtual machine.
 		</li>
 		<li>
 4 - Configure a web server in a VM
-	* Install http package
-	* The index.html must exist in /var/www/html
-	* create a Network policy
-	* The Network Policy restrict the project 
+        * The lancre virtual machine should have httpd package installed 
+	* The service of httpd should be started and enabled.
+	* The web server should serve a file service.html from registry.lab.example.com/service.html
+	* The service.html must exist in /var/www/html directory and should be served to the pods
+	* Th ClusterIP service should be configured such that the endpoints is able to serve.
+	* create a Network policy allow-web-access
+	* The Network Policy should restrict the access to the ramtops project
 	* Only access to port 80
+        * No other projects should be allowed to access the lancre virtual machine as per the network policy.
 </li>
 		<li>
 5 - Deploy a multihomed VM
-	* the VM runs in a specific project
-	* volume is 30Gi, flavour is small, type server
-	* create first and second NIC, one default and the other one bridge
+        * The user moist should be able to create and update the virtual machine in uberwald project.
+	* the VM ligpiw runs in a uberwald.
+	* The persistent storage is 30Gi the name is lancre.
+        * The storage class to be used ocs-external-storagecluster-ceph-rbd.
+	* The flavour is small, type server. 
+	* The virtual machine should have a user verence-ii with the password as redhatocp. This has to be done using cloud-init. 
+	* SSH must be used from the /home/opsadm/.ssh/id_rsa_ex316.pub
+        * the virtual machine should have two network interfaces. The first network interface is the default using the pod network as masquerade.
+        * the second interface should use the named nic-0 which is connected to the bridge which is using the uberwald/ankhold network attachment definition resource.
 </li>
 		<li>
 6 - Manage storage for VM
-	* Create 2 VMs using the respective templates
-	* Move the disk from VM1 to VM2 without loosing the data
-	* on the 2nd VM create a disk (details are given)
-</li>
+	* Create a VM dalwin using the dalwin templates.
+	* Create a VM fili using the fili templates.
+	* The VMs should be in the project vm-import
+	* Move the webdata disk from dalwin to fili without loosing the data and ensuring that the access mode, volume mode and storage class remains the same.
+        * On the fili VM, the device should be shown as /dev/vdc and mount it permanently to /var/www/html 
+	* On the dalwin VM, add additional disk using the 1GiB size from ocs-external-storagecluster-ceph-rbd with shared access. 
+	* The new disk on dalwin VM should be identified as /dev/vdc and should be mounted persistently under /var/www/html. 
+	</li>
 		<li>
 7 - Create a VM Template (details are given)
 	</li>
