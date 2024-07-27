@@ -81,13 +81,25 @@ Migrate Virtual Machines from Compatible Hypervisors
 	* The new disk on dalwin VM should be identified as /dev/vdc and should be mounted persistently under /var/www/html. 
 	</li>
 		<li>
-7 - Create a VM Template (details are given)
+7 - Create a VM Template
+	* Create a project vt100cinema
+	* Create a template named docusri in the vt100cinema project using the rhel9-server-small image.
+	* Configure the scheduling to support Live Migration
+	* Ensure that the VM uses the default interface from the pod networking and is set to Masquerade
+	* The system should have a cloudinitdisk and a rootdisk using the http://utility.lab.example.com:8080/openshift4/images/rhel-9.2-x86_64-vm.qcow2 image. 
+	* The rootdisk should be of 30 GiB based on virtio model and should use ocs-external-storagecluster-ceph-rbd storageclass.
+	* It should have shared access and volume mode should be block
+	* The template should incude a SSH public key from /home/opsadm/.ssh/id_rsa_ex316.pub
+	* The VM initialization should have the installation of vt100cinema package using the repository as defined in http://registry.lab.example.com/myrepo/rhel.repo.
+	* The template should include a cloudinit user named gandalf with the password of redhatocp.
 	</li>
 		<li>
 8 - Create a service using a VM Load Balancing
-	* create 2 VMs using a provided template
-	* Create a service called service-1, type NodePort, pod selector (provided), Ports 23 and 30023
-	* Create a Route called route-1 so that the service is available at service-1.example.com
+	* create 2 VMs using a docusri template named as castor and pollux in the vt100cinema project.
+	* Create the service webservice of the type NodePort with the pod Selector as app:flix
+	* The webservice should be listening on port 23 and NodePort should be 30023. The sample template file is provided.
+        * Create a route called webroute so that the webservice is accessible using the link flix-webservice-vt100cinema.apps.ocp4.example.com
+	* You can use telnet flix-webservice-vt100cinema.apps.ocp4.example.com 30023 to test 
 	</li>
 		<li>
 9 - Create a VM snapshot (details provided)
