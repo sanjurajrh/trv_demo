@@ -1,0 +1,57 @@
+---
+- name: Deploy a web application
+  hosts: webservers
+  tasks:
+  - name: Install the webserver
+    ansible.builtin.yum:
+      name: "{{ web_package }}"
+      state: latest
+  - name: Deploy web content
+    ansible.builtin.template:
+      src: templates/index.html.j2
+      dest: "{{ web_dest }}"
+  - name: Start the webserver
+    ansible.builtin.service:
+      name: "{{ web_service }}"
+      state: started
+      enabled: true
+  - name: Enable the {{ web_fw_service }} service in the firewall
+    ansible.posix.firewalld:
+      service: "{{ web_fw_service }}"
+      state: enabled
+      permanent: true
+      immediate: true
+
+- name: Deploy database servers
+  hosts: dbservers
+  tasks:
+  - name: Install the database server
+    ansible.builtin.yum:
+      name: "{{ db_package }}"
+      state: latest
+  - name: Start the database server
+    ansible.builtin.service:
+      name: "{{ db_service }}"
+      state: started
+      enabled: true
+  - name: Enable the {{ db_fw_service }} service in the firewall
+    ansible.posix.firewalld:
+      service: "{{ db_fw_service }}"
+      state: enabled
+      permanent: true
+      immediate: true
+
+- name: Test web application
+  hosts: webservers
+  tasks:
+  - name: Web application test
+    block:
+    - name: Check web application
+      ansible.builtin.uri:
+        url: http://{{ item }}
+      loop: "{{ groups['webservers'] }}"
+    rescue:
+    - name: Restart web server
+      ansible.builtin.service:
+        name: "{{ web_service }}"
+        state: restarted

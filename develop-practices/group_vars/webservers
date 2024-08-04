@@ -1,0 +1,6 @@
+---
+web_dest: /var/www/html/index.html
+web_service: httpd
+web_fw_service: http
+web_package:
+  - httpd
